@@ -129,7 +129,9 @@ class PipelineStack(Stack):
             raise ValueError(f"segment=real needs P1's model.tar.gz at {cfg.model_tar} (context model_tar)")
         image = ecr_assets.DockerImageAsset(
             self, "SegImage", directory=str(REPO), file="ml/serve/Dockerfile",
-            platform=ecr_assets.Platform.LINUX_AMD64)
+            platform=ecr_assets.Platform.LINUX_AMD64,
+            # P1's root .dockerignore whitelists only the sources, so CDK's context staging would drop the Dockerfile.
+            exclude=["!ml/serve/Dockerfile"], ignore_mode=IgnoreMode.DOCKER)
         model_data = s3_assets.Asset(self, "SegModelData", path=str(cfg.model_tar))
 
         role = iam.Role(self, "SageMakerRole", assumed_by=iam.ServicePrincipal("sagemaker.amazonaws.com"))

@@ -164,3 +164,27 @@ def test_google_key_flag_wires_ssm_parameter():
         "ImageConfig": {"Command": ["handlers.fetch_handler"]},
         "Environment": {"Variables": Match.object_like({"GOOGLE_SOLAR_SSM_PARAMETER": "/solarrooftop/google_api_key"})},
     })
+
+
+def test_staged_docker_contexts_contain_their_dockerfiles(tmp_path):
+    """CDK stages image contexts through the root .dockerignore; each staged context must keep what its build needs."""
+    model = tmp_path / "model.tar.gz"
+    model.write_bytes(b"x")
+    app = cdk.App(outdir=str(tmp_path / "out"),
+                  context={"fetch": "real", "segment": "real", "simulate": "real", "model_tar": str(model)})
+    cfg = Config.from_scope(app)
+    core = CoreStack(app, "SolarCore", cfg=cfg, env=ENV)
+    PipelineStack(app, "SolarPipeline", cfg=cfg, core=core, env=ENV)
+    assembly = app.synth()
+    manifest = json.loads((Path(assembly.directory) / "SolarPipeline.assets.json").read_text(encoding="utf-8"))
+    staged = {d["source"]["dockerFile"]: Path(assembly.directory) / d["source"]["directory"]
+              for d in manifest["dockerImages"].values()}
+    assert set(staged) == {"ml/serve/Dockerfile", "solar/Dockerfile"}
+    for dockerfile, root in staged.items():
+        assert (root / dockerfile).is_file(), dockerfile
+    p1 = staged["ml/serve/Dockerfile"]
+    assert all((p1 / "ml/serve" / f).is_file() for f in ("serve.py", "segment.py", "requirements-serve.txt"))
+    p2 = staged["solar/Dockerfile"]
+    assert (p2 / "solar/handlers.py").is_file() and (p2 / "solar/requirements.lock.txt").is_file()
+    assert (p2 / "contracts/schemas/C.schema.json").is_file()
+    assert not (p2 / "solar/tests").exists() and not (p2 / "data").exists()
