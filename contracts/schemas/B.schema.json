@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solarrooftop/contracts/B.schema.json",
+  "title": "Contract B — Segmentation (P1 -> P2)",
+  "description": "Target building's roof and the obstacles on it, as a WGS84 GeoJSON FeatureCollection. Defined in the 'Shared team contract' section of the P*.md briefs.",
+  "type": "object",
+  "required": ["job_id", "model_version", "type", "features"],
+  "properties": {
+    "job_id": {"type": "string", "minLength": 1},
+    "model_version": {"type": "string", "minLength": 1},
+    "type": {"const": "FeatureCollection"},
+    "warning": {"type": "string", "description": "Human-readable caveat. Set when no roof was found (features empty) or when the roof is approximate, e.g. no footprint was supplied and the roof was capped to a radius around the job point."},
+    "features": {"type": "array", "items": {"$ref": "#/$defs/feature"}}
+  },
+  "$defs": {
+    "position": {
+      "type": "array", "minItems": 2, "maxItems": 2,
+      "prefixItems": [
+        {"type": "number", "minimum": -180, "maximum": 180},
+        {"type": "number", "minimum": -90, "maximum": 90}
+      ]
+    },
+    "polygon": {
+      "type": "object",
+      "required": ["type", "coordinates"],
+      "properties": {
+        "type": {"const": "Polygon"},
+        "coordinates": {
+          "type": "array", "minItems": 1,
+          "items": {"type": "array", "minItems": 4, "items": {"$ref": "#/$defs/position"}}
+        }
+      }
+    },
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "roof": {
+      "type": "object",
+      "required": ["id", "kind", "roof_type", "azimuth_deg", "tilt_deg", "confidence"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^r[0-9]+$"},
+        "kind": {"const": "roof"},
+        "roof_type": {"enum": ["flat", "pitched"]},
+        "azimuth_deg": {"type": ["number", "null"], "minimum": 0, "maximum": 360},
+        "tilt_deg": {"type": ["number", "null"], "minimum": 0, "maximum": 90},
+        "confidence": {"$ref": "#/$defs/confidence"}
+      }
+    },
+    "obstacle": {
+      "type": "object",
+      "required": ["id", "kind", "roof_id", "class", "height_m", "confidence"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^o[0-9]+$"},
+        "kind": {"const": "obstacle"},
+        "roof_id": {"type": "string", "pattern": "^r[0-9]+$"},
+        "class": {"enum": ["water_tank", "stair_room", "ac_unit", "solar_heater", "existing_pv", "parapet", "tree", "other"]},
+        "height_m": {"type": ["number", "null"], "minimum": 0},
+        "confidence": {"$ref": "#/$defs/confidence"}
+      }
+    },
+    "feature": {
+      "type": "object",
+      "required": ["type", "geometry", "properties"],
+      "properties": {
+        "type": {"const": "Feature"},
+        "geometry": {"$ref": "#/$defs/polygon"},
+        "properties": {"oneOf": [{"$ref": "#/$defs/roof"}, {"$ref": "#/$defs/obstacle"}]}
+      }
+    }
+  }
+}

@@ -1,0 +1,5 @@
+# Docker build context is the repo root; only ml/serve is needed.
+*
+!ml/serve/segment.py
+!ml/serve/serve.py
+!ml/serve/requirements-serve.txt

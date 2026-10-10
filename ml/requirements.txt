@@ -1,0 +1,12 @@
+torch>=2.8
+torchvision
+transformers>=4.44,<5
+numpy
+pillow
+tqdm
+opencv-python-headless
+scipy
+geopandas
+overturemaps
+jsonschema
+pytest

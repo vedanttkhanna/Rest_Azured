@@ -1,0 +1,43 @@
+{
+ "job_id": "fixture-mayur-vihar-001",
+ "lat": 28.6039825,
+ "lng": 77.2935395,
+ "address": "Mayur Vihar Phase 1, Delhi (sample building)",
+ "image_s3_uri": "contracts/fixtures/rgb.png",
+ "image_bounds": [
+  77.2931962,
+  28.603681,
+  77.2938828,
+  28.6042839
+ ],
+ "gsd_m": 0.1311,
+ "dsm_s3_uri": null,
+ "footprint": {
+  "type": "Polygon",
+  "coordinates": [
+   [
+    [
+     77.2935613,
+     28.6040841
+    ],
+    [
+     77.2934434,
+     28.6040371
+    ],
+    [
+     77.2935176,
+     28.6038807
+    ],
+    [
+     77.2936357,
+     28.6039278
+    ],
+    [
+     77.2935613,
+     28.6040841
+    ]
+   ]
+  ]
+ },
+ "imagery_source": "esri"
+}

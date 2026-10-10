@@ -1,0 +1,23 @@
+# Datasets and model weights stay out of Git
+/data/
+*.pt
+*.pth
+*.safetensors
+*.ckpt
+*.tar.gz
+*.zip
+
+# Secrets
+.env
+.env.*
+
+# OS / tooling
+.DS_Store
+__pycache__/
+.ipynb_checkpoints/
+node_modules/
+cdk.out/
+
+# Python virtual envs
+.venv/
+.pytest_cache/
