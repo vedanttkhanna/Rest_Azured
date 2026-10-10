@@ -1,0 +1,12 @@
+// Entity model used by the api Lambda (backend/api/authz.py).
+// Principal = the caller (Cognito sub), member of the groups in its `cognito:groups` claim.
+// Account = the caller's own account; the resource for actions that act on "my jobs" (create, list, batch, export).
+// Job = one assessment job, owned by the user who created it.
+
+entity Group;
+entity User in [Group];
+entity Account { owner: User };
+entity Job { owner: User };
+
+action CreateJob, ListJobs, BatchCreate, ExportCsv appliesTo { principal: User, resource: Account };
+action ReadJob appliesTo { principal: User, resource: Job };

@@ -11,8 +11,9 @@ SolarRooftop AI lets homeowners and solar installers in **Delhi** assess rooftop
 
 - Contains planning docs (four role briefs `P1_ML_Segmentation.md`, `P2_Solar_Geospatial.md`, `P3_Backend_Cloud.md`, `P4_Frontend_Product.md`), these context files, and ML scripts in `ml/` (data conversion, Delhi tile download, training, inference).
 - `contracts/` has schema B + real fixtures; `ml/tests/` has contract-B tests. Schemas A and C not written yet.
-- **Not a Git repository.**
-- Location: `~/Desktop/SolarRooftop-AI/` (moved from `~/Downloads/submission/solarrooftop-team/` on 2026-10-10).
+- **Git:** remote `origin` = https://github.com/vedanttkhanna/Rest_Azured. Branches: `p1` (P1's work, no `main` yet), `p3` (P3 backend/infra, branched from `p1`).
+- Locations: P1 machine `~/Desktop/SolarRooftop-AI/`; P3 machine `C:/Users/HP/Desktop/VS/AWS/Rest_Azured` (Windows 11). The P3 parent folder `C:/Users/HP/Desktop/VS/AWS/` has stale pre-Git copies of the docs — not the project.
+- P3 code: `infra/` (CDK, 3 stacks) and `backend/` (Lambdas); how to run: `infra/README.md`. **Deployed 2026-10-11** to account 336881700677 / ap-south-1 (stub steps); API `https://0cw3tjdvo2.execute-api.ap-south-1.amazonaws.com`.
 - Local data lives in `data/` (git-ignored): `data/raw/RID_m1655470/RID_dataset/` (original TUM download, 1.4 GB) and `data/processed/rid_ours/{train,val,test}/{images,masks}` (converted, fold 1, 645 MB).
 
 ## Architecture (planned — nothing implemented yet)
@@ -38,6 +39,14 @@ The data contracts (A RoofJob, B Segmentation GeoJSON, C Report) and HTTP routes
 | Two paths for heights: Google Solar API DSM if covered, else a synthetic height raster (Open Buildings 2.5D + class-default obstacle heights) | No public LiDAR for Delhi; Google Solar has only limited India coverage. |
 | Contract-first development with fixtures and stubs | Lets 4 people work in parallel without blocking. |
 | Cedar policies for Homeowner vs Installer | Real authorization need + counts as an AWS open-source tool. |
+| Cedar entity model: `User` in `Group`; resource `Account` (owner = caller) for create/list/batch/export, `Job` (owner) for read; GET of someone else's job → 404 | Create/batch need a resource to check ownership against; 404 avoids job-id probing. |
+| Pipeline steps exchange **S3 URIs**, not documents; interface in `contracts/README.md` | Step Functions state limit is 256 KB. |
+| Each step is `stub` or `real`, chosen per step by CDK context (`-c segment=real`) | Lets the pipeline run end-to-end before P1/P2 are wired in, and integrate one component at a time. SageMaker endpoint exists only when `segment=real`. |
+| Budget with `IncludeCredit: false`, alerts $25/$75/$150 actual + $150 forecast | With credits included, spend nets to $0 and alerts never fire. |
+| Lambda zips built at synth time with `uv pip install --python-platform x86_64-manylinux2014` (no Docker) | P3 machine is Windows; cedarpy/jsonschema need Linux wheels; keeps `cdk synth` and CI Docker-free. |
+| Daily quota table (Homeowner 20, Installer 100 jobs/IST day), Delhi/NCR bbox 28.4–28.9 N, 76.8–77.4 E, batch ≤ 25 | Protects Google API + SageMaker spend; demo scope is Delhi. |
+| API reports jobs still running after 7 min as `failed` | Step Functions' overall timeout skips Catch, which would leave the job stuck. |
+| No separate SAM `template.yaml`; `sam local invoke -t infra/cdk.out/<Stack>.template.json` | One source of truth (CDK). |
 
 ## Verified external facts
 
@@ -63,9 +72,14 @@ The data contracts (A RoofJob, B Segmentation GeoJSON, C Report) and HTTP routes
 
 - **Serving design (2026-10-10):** SageMaker Serverless Inference, custom container (`ml/serve/`): `GET /ping`, `POST /invocations` on :8080, model from `/opt/ml/model` (model.tar.gz with weights at root). CPU-only; ~0.8 s per request and ~1.5 GB RAM measured locally. Deploy steps: `ml/serve/README.md`.
 
+- **P1 model package** `model.tar.gz` sha256 `c345069342ba4ba71ecd074786e8c2e7a4d22004d106b192840f18b895f3a1ea` (101,587,119 bytes) — verified on the P3 machine 2026-10-10; stored at `data/models/package/` (git-ignored).
+- **Verified live in ap-south-1 (2026-10-11):** HTTP API + Cognito JWT, Step Functions, DynamoDB, S3, Location Service Places v2 geocoding. Presigned S3 URLs must use the regional host (virtual addressing) or S3 returns SignatureDoesNotMatch. `aws login` credentials require `botocore[crt]` in Python.
+- **Always deploy SolarCore with `SOLAR_ALERT_EMAILS` set** — without it the budget and alert subscriptions are removed.
+- **Windows Python** defaults to cp1252 for `Path.read_text()`; our JSON schemas contain non-ASCII (—, ×). Always pass `encoding="utf-8"`.
+
 ## Unverified assumptions (check before relying on them)
 
-PM Surya Ghar subsidy amounts (₹30k/kW ≤2 kW, ₹18k 3rd kW, cap ₹78k); capex ≈ ₹57,500/kW; tariff ₹7/kWh; grid CO₂ ≈ 0.71 t/MWh; default obstacle heights (tank 1.4 m, stair room 2.7 m, parapet 1.0 m…); 540 Wp panel 2.278 × 1.134 m; `ap-south-1` support for every service used (SageMaker Serverless, Location Service, Bedrock for the optional advisor).
+PM Surya Ghar subsidy amounts (₹30k/kW ≤2 kW, ₹18k 3rd kW, cap ₹78k); capex ≈ ₹57,500/kW; tariff ₹7/kWh; grid CO₂ ≈ 0.71 t/MWh; default obstacle heights (tank 1.4 m, stair room 2.7 m, parapet 1.0 m…); 540 Wp panel 2.278 × 1.134 m; `ap-south-1` support for every service used (SageMaker Serverless, Location Service, Bedrock for the optional advisor; Places v2 `geo-places` Geocode; `AWS::Budgets::Budget` via CloudFormation). AWS account is new with $200 Free-Tier credits — whether it is on the **Free plan** (which reportedly restricts some services, possibly SageMaker, and closes when credits run out) is not checked yet.
 
 ## Failed approaches worth remembering
 
@@ -73,6 +87,6 @@ PM Surya Ghar subsidy amounts (₹30k/kW ≤2 kW, ₹18k 3rd kW, cap ₹78k); ca
 
 ## Known issues
 
-- Not a Git repo, so `git status` checks and Codex project-root discovery don't apply yet.
-- `contracts/schemas` and fixtures referenced throughout the briefs don't exist yet.
+- `contracts/schemas/C.schema.json` not written yet (P2). `contracts/fixtures/report_C.json` + `shade.png` are a P3 DRAFT placeholder (illustrative numbers).
+- P1's container image has never been built with Docker (neither P1 nor P3 yet).
 - **Open risk — small obstacles may be invisible at available resolution.** Delhi imagery is satellite (~0.3–0.5 m/px), not ~0.1 m aerial like RID. A 1,000 L water tank (~1.1 m) is only ~2–4 px, so per-object detection of tanks / AC units may not be feasible. Stair rooms (~3×3 m, cast shadows) are more likely detectable. Not yet checked against real Delhi tiles. Fallback plan: merge obstacles into one `obstacle` class and apply a usable-area derating factor.

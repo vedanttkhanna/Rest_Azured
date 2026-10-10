@@ -37,12 +37,12 @@ AWS region: `ap-south-1`. **Do not use AWS App Runner** (closed to new customers
 - Each directory has one owner (table above). Edit outside your area only when the task requires it, and note it in `TASKS.md`.
 - GeoJSON is always WGS84 (EPSG:4326, `[lng, lat]`). All metric computation in UTM 43N (EPSG:32643).
 - All tunable constants (heights, prices, subsidies, losses) live in config files, never hard-coded, and are echoed in report `assumptions`.
-- Python 3.12; TypeScript strict mode. Scripts that run on the team's Macs must also work on Python 3.9 (macOS system Python): use `from __future__ import annotations`.
+- Python 3.12; TypeScript strict mode. Scripts that run on the team's Macs must also work on Python 3.9 (macOS system Python): use `from __future__ import annotations`. Read/write text files with `encoding="utf-8"` (Windows defaults to cp1252).
 - Datasets, model weights and archives go in `data/` (git-ignored, see `.gitignore`). Never commit data. Raw downloads → `data/raw/`, converted → `data/processed/`.
 
 ## Setup & test commands
 
-Run from the repo root. SageMaker build/deploy steps for P3: `ml/serve/README.md`. Only `ml/` exists so far; other owners add their own verified commands here.
+Run from the repo root. SageMaker build/deploy steps for P3: `ml/serve/README.md`. `ml/` (P1) and `infra/` + `backend/` (P3) exist; other owners add their own verified commands here.
 
 **ml/ (verified 2026-10-10 on Apple M5, macOS):**
 ```bash
@@ -58,6 +58,15 @@ MODEL_DIR=<unpacked model.tar.gz> ml/.venv/bin/python ml/serve/serve.py serve   
 ml/.venv/bin/python ml/serve/invoke.py --url http://localhost:8080
 ml/.venv/bin/python -m pytest ml/tests -q    # 13 tests; model/package tests skip if weights or package missing
 ```
+
+**infra/ + backend/ + contracts/ tests (P3, verified 2026-10-10 on Windows 11; use `.venv/bin/` on Linux/macOS):**
+```bash
+uv venv .venv --python 3.12 && uv pip install --python .venv/Scripts/python.exe -r infra/requirements-dev.txt
+.venv/Scripts/ruff.exe check backend infra contracts
+.venv/Scripts/python.exe -m pytest backend/tests infra/tests contracts/tests -q    # 74 tests, no AWS needed (moto)
+cd infra && PATH="$PWD/../.venv/Scripts:$PATH" cdk synth --quiet                 # needs Node + `npm i -g aws-cdk`
+```
+Deploy / smoke / teardown (P3 only, needs AWS credentials): see `infra/README.md` — **not yet run**.
 
 ## Constraints
 

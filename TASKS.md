@@ -12,26 +12,35 @@ Turn the planning docs into a working, parallelisable repo: create `contracts/` 
 - [x] Research + architecture plan; 4 role briefs written (`P1_…`–`P4_….md`).
 - [x] P1 Step 2: RID downloaded (`data/raw/RID_m1655470`) and converted to our classes (`data/processed/rid_ours`, fold 1: 1374 train / 352 val / 154 test). Visually checked on 2 previews.
 - [x] Shared agent context system: `AGENTS.md`, `PROJECT_CONTEXT.md`, `TASKS.md`, `CLAUDE.md`, `.agents/rules/shared-context.md`.
+- [x] P3 M0/M1/M2 **code** (branch `p3`): `contracts/schemas/A.schema.json`, `contracts/openapi.yaml`, DRAFT `contracts/fixtures/report_C.json` + `shade.png`; CDK app `infra/` (SolarCore / SolarPipeline / SolarApi), backend Lambdas `backend/` (api with Cedar + quota + bbox + batch, SageMaker invoker, save_result, post-confirmation, stubs), Cedar policies, scripts (deploy/smoke/teardown/export_env/make_installer/set_google_key), CI workflow. 74 tests pass. **Nothing deployed to AWS yet.**
 
 ### In progress
 - [ ] P1 Stage A training on RID: **stopped at epoch 11/15** (process killed externally ~11:13, no error in log). Best checkpoint epoch 8 kept at `data/models/segformer_b2_rid/best` (val mIoU 0.608). No `last/` checkpoint. Not evaluated on the RID test split yet.
 - [x] P1 Stage B fine-tune on footprint auto-labels → `data/models/segformer_b2_delhi_fp/best` (epoch 10 of 12). **Current best model.**
 - [x] P1 item 1: post-processing → contract B (`ml/serve/segment.py`), schema `contracts/schemas/B.schema.json`, real fixtures `contracts/fixtures/{job_A.json,rgb.png,seg_B.json}`, tests `ml/tests/test_contract_b.py` (6 passing).
 - [x] P1 item 2: SageMaker BYOC package in `ml/serve/` (server, Dockerfile, model.tar.gz builder, invoke client, README for P3). Server verified locally; **Docker image build and AWS deploy not done/verified** (no Docker/Finch/AWS CLI on P1 machine).
-- [ ] P1 next: (3) model card + metrics slide; (4) optional quality work (obstacle recall e.g. stair rooms, tree class). Hand `ml/serve/README.md` + `model.tar.gz` to P3.
+- [ ] P1 next: (3) model card + metrics slide; (4) optional quality work (obstacle recall e.g. stair rooms, tree class). `model.tar.gz` **received by P3** (sha256 verified, see Verification).
+- [x] P3 M1 **deployed** 2026-10-11 (all steps stubbed), account 336881700677, ap-south-1. API `https://0cw3tjdvo2.execute-api.ap-south-1.amazonaws.com`, user pool `ap-south-1_TDZMa24oN`, client `3l16lr73pip6o9sbbnk258vbb7` (values in `web/.env.production`, git-ignored). smoke.py ALL PASSED.
+- [ ] P3 M3: P1 endpoint (`-c segment=real`) — needs Docker Desktop started.
 
 ### Blockers
 - None hard. Soft: Google Solar API coverage for Delhi unknown (needs an API key, P2 day-1 task).
+- P3 deploy needs the user: `aws configure sso` (no credentials on the P3 machine yet) and Docker Desktop started once (licence prompt) for `segment=real`.
+- Team approval needed (contract PR): schema A, pipeline step interface (contracts/README.md), `heatmap_png_url` in GET /jobs/{id}, draft report_C until P2 owns C.
 
 ### Next steps (priority order)
-1. **`contracts/`**: JSON Schemas for A, B, C + `fixtures/job_A.json`, `seg_B.json`, `report_C.json` for one real Delhi house; a schema-validation test. *(Next actionable step.)*
+1. ~~P3 first deploy~~ done 2026-10-11 (see Status). Remaining from this item: send `web/.env.production` values to P4; teammates confirm SNS alert subscriptions. Original instructions: user signs in (`aws configure sso --profile solar`, see `infra/README.md`), checks Billing → account plan, `cdk bootstrap aws://<acct>/ap-south-1`, then `SOLAR_ALERT_EMAILS=... infra/scripts/deploy.sh` (all stubs) and `python infra/scripts/smoke.py`; send `web/.env.production` values to P4.
+1b. P3: start Docker Desktop, build + run P1's container locally (`ml/serve/README.md` step 3), then `deploy.sh -c segment=real` and `ml/serve/invoke.py --endpoint solarrooftop-seg`. If SageMaker is refused on the Free plan → upgrade to Paid plan (credits still apply).
+1c. Contracts: P2 writes `schemas/C.schema.json` and replaces the DRAFT `fixtures/report_C.json`; team approves P3's contract additions (see Blockers).
 2. ~~git init~~ done by user 2026-10-10: remote `origin` = https://github.com/vedanttkhanna/Rest_Azured, P1 work on branch `p1`.
 3. P2: Google Solar coverage check on ~10 Delhi addresses → record in `solar/docs/coverage_delhi.md`.
-4. P3: AWS account, budget alarms, CDK skeleton with stub pipeline.
+4. P3: after deploy — CloudWatch dashboard, architecture diagram (`docs/`), cost log updates, P2 integration (`-c fetch=real -c simulate=real`).
 5. P4: `web/` scaffold with MSW mocks from fixtures.
 6. P1: labelling guide + CVAT/Roboflow project; SAM 2 baseline.
 
 ### Verification results
+- **P3 live (2026-10-11):** `deploy.sh` (stubs) created SolarCore/SolarPipeline/SolarApi. `python infra/scripts/smoke.py` → **ALL PASSED** (401 no token; job fetching→segmenting→simulating→done in 18 s; report present; presigned heatmap downloads; other user's job 404; list; outside Delhi 400; Homeowner batch 403 via Cedar; Installer batch 201). `smoke.py --address "Pocket A, Mayur Vihar Phase 1, Delhi"` → done in 10 s (Location Service geo-places works in ap-south-1). Fixes found while deploying: (1) `aws login` credentials need `botocore[crt]` (added to requirements-dev); (2) presigned URLs signed for the global S3 host gave `SignatureDoesNotMatch` → `backend/common/s3util.py` now uses virtual addressing (regional host); redeployed SolarPipeline+SolarApi with `--exclusively`.
+- **P3 (2026-10-10, Windows 11, Python 3.12.14 via uv):** `.venv/Scripts/python.exe -m pytest backend/tests infra/tests contracts/tests -q` → **74 passed** (api routes/Cedar/quota/bbox/batch/ownership/stale jobs with moto; stubs end-to-end; invoker error mapping; save_result; post-confirmation; Cedar matrix + schema validation; CDK assertions: no VPC/NAT/EC2, 7-day log retention, Lite Cognito, budget excludes credits, JWT on all 4 routes, ServerlessConfig 4096/2). `ruff check backend infra contracts` → clean. `cdk synth` (stub mode and `-c segment=real`) → OK. Lambda package contains the Linux cedarpy binary (`_internal.cpython-312-x86_64-linux-gnu.so`). `model.tar.gz` from P1: sha256 `c345069342ba4ba71ecd074786e8c2e7a4d22004d106b192840f18b895f3a1ea` (matches P1's prefix). **Not run:** any AWS deploy, smoke.py, Docker build of P1/P2 images, `sam local`.
 - `ml/train/train.py` smoke test (1 epoch, 200 train / 50 val images): ran OK in 1.75 min; val mIoU 0.340, roof IoU 0.625, obstacles mIoU 0.081 (meaningless this early; only proves the pipeline works).
 - `ml/data/download_delhi_tiles.py`: 72 tiles (8 areas × 3×3) downloaded OK; some Dwarka/Rohini centre tiles are roads/parks.
 - Labelling pipeline (2026-10-10): `make_label_batch.py` → 49 tiles (39 train / 10 test, test = mayur_vihar), 1,800 pre-label polygons. Round trip pre-labels → `cvat_to_masks.py` vs. original predictions: pixel agreement 0.989; IoU roof 0.963, pv 0.894, tree 0.877, obstacle 0.920. RLE decode (compressed + uncompressed) unit check passed. Stage B smoke test (`train.py --init …rid/best`, 1 epoch on round-trip data, 33 train / 6 val): ran OK, val mIoU 0.694 (on pseudo-labels, not meaningful as accuracy).
@@ -47,6 +56,21 @@ Turn the planning docs into a working, parallelisable repo: create `contracts/` 
 ---
 
 ## Handoff log
+
+### 2026-10-11 — Claude Code — P3 first deploy verified
+- **Files changed:** `backend/common/s3util.py` (regional presigned URLs), `backend/tests/test_api.py` (asserts regional host), `infra/requirements-dev.txt` (+`botocore[crt]`), `TASKS.md`, `PROJECT_CONTEXT.md`.
+- **Commands:** user ran `infra/scripts/deploy.sh`; `export_env.py` (after installing awscrt); `cdk deploy SolarPipeline SolarApi --exclusively` (SolarCore NOT redeployed: redeploying it without `SOLAR_ALERT_EMAILS` would remove the budget); `smoke.py` (+ `--address`). Results in Verification.
+- **Tests:** `pytest backend/tests -q` → 36 passed.
+- **Next step:** start Docker Desktop, test P1's container locally, `deploy.sh -c segment=real`.
+
+### 2026-10-10 — Claude Code — P3 backend + infra scaffold (branch `p3`, off `origin/p1`)
+- **Workspace:** P3 machine clones the repo to `C:/Users/HP/Desktop/VS/AWS/Rest_Azured`. The parent folder `C:/Users/HP/Desktop/VS/AWS/` holds **stale** copies of the briefs/context files from before Git — ignore them; `model.tar.gz` there was copied into `data/models/package/` (git-ignored).
+- **Files created:** `contracts/schemas/A.schema.json`, `contracts/openapi.yaml`, `contracts/fixtures/report_C.json` + `shade.png` (DRAFT), `contracts/tests/test_fixtures.py`; `infra/` (`app.py`, `cdk.json`, `requirements*.txt`, `README.md`, `stacks/{config,packaging,common,core_stack,pipeline_stack,api_stack}.py`, `policies/{jobs.cedar,schema.cedarschema}`, `scripts/{deploy.sh,teardown.sh,make_installer.sh,set_google_key.sh,export_env.py,smoke.py}`, `tests/{test_policies,test_stacks}.py`); `backend/` (`api/{handler,authz,geocode,quota}.py`, `invoke_sagemaker/`, `save_result/`, `post_confirmation/`, `stubs/`, `common/s3util.py`, `tests/`); `.github/workflows/ci.yml`; `ruff.toml`; `docs/cost_log.md`. **Changed:** `.gitignore` (+`infra/.build/`), `contracts/README.md` (A/openapi/draft-C rows + pipeline step interface), `AGENTS.md`, `PROJECT_CONTEXT.md`, `TASKS.md`.
+- **Decisions:** see PROJECT_CONTEXT.md "Key design decisions" (P3 rows). Notably: steps exchange S3 URIs; stub/real per step via CDK context; Cedar `Account`/`Job` entity model; GET of another user's job = 404; Quotas table (Homeowner 20/day, Installer 100/day, IST); stale running jobs (>7 min) reported failed; Lambda deps packaged with uv (no Docker); no separate SAM `template.yaml` (use `sam local invoke -t infra/cdk.out/...`).
+- **Commands:** installed AWS CLI 2.37.12, SAM CLI 1.168.0, Docker Desktop (winget), CDK CLI 2.1145.0 (npm); `uv venv .venv --python 3.12` + deps; pytest/ruff/cdk synth as in Verification results. Draft report generated by a one-off script (not committed): panels packed in the fixture footprint with 0.6 m setback, 3.8 m row pitch, 0.5 m obstacle buffer; checked visually on the tile.
+- **Not done:** any AWS action (no credentials on this machine), Docker build/run of P1's image (Docker Desktop not started yet), commit/push (needs user authorization).
+- **Gotcha found:** Windows Python defaults to cp1252 for `read_text()` — always pass `encoding="utf-8"` (schemas contain non-ASCII).
+- **Next step:** Next steps #1 (user login → bootstrap → deploy stubs → smoke test).
 
 ### 2026-10-10 — Claude Code — Git setup (user-driven)
 - User ran `git init`, `git remote add origin https://github.com/vedanttkhanna/Rest_Azured`, `git checkout -b p1` (remote was empty, so no `origin/main`), and staged the project files.

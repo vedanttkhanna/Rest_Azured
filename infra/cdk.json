@@ -1,0 +1,21 @@
+{
+  "app": "python app.py",
+  "watch": {
+    "include": ["**"],
+    "exclude": ["README.md", "cdk*.json", "**/__pycache__", "tests", ".build"]
+  },
+  "context": {
+    "fetch": "stub",
+    "segment": "stub",
+    "simulate": "stub",
+    "model_tar": "data/models/package/model.tar.gz",
+    "model_version": "segformer-b2-delhi-fp-v1",
+    "seg_memory_mb": 4096,
+    "seg_max_concurrency": 2,
+    "web_origins": "http://localhost:5173",
+    "quota_homeowner": 20,
+    "quota_installer": 100,
+    "batch_max": 25,
+    "places_region": "ap-south-1"
+  }
+}

@@ -21,3 +21,6 @@ cdk.out/
 # Python virtual envs
 .venv/
 .pytest_cache/
+
+# CDK Lambda staging (infra/stacks/packaging.py)
+infra/.build/

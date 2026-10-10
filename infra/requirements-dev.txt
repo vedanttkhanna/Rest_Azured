@@ -1,0 +1,8 @@
+-r requirements.txt
+cedarpy==4.12.1
+jsonschema==4.26.0
+boto3==1.43.111
+botocore[crt]==1.43.111   # needed for `aws login` credentials
+moto[dynamodb,s3,stepfunctions,cognitoidp,sagemaker,ssm]==5.2.3
+pytest==9.1.1
+ruff==0.17.0

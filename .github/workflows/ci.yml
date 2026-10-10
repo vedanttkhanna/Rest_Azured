@@ -1,0 +1,25 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend-infra-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Python deps
+        run: uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r infra/requirements-dev.txt
+      - name: Lint
+        run: .venv/bin/ruff check backend infra contracts
+      - name: Tests (backend, Cedar policies, CDK assertions, contract fixtures)
+        run: .venv/bin/python -m pytest backend/tests infra/tests contracts/tests -q
+      - name: cdk synth
+        run: |
+          npm install -g aws-cdk@2.1145.0
+          cd infra && PATH="$PWD/../.venv/bin:$PATH" cdk synth --quiet
