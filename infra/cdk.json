@@ -17,6 +17,7 @@
     "quota_installer": 100,
     "batch_max": 25,
     "places_region": "ap-south-1",
+    "p2_memory_mb": 3008,
     "google_key": false
   }
 }

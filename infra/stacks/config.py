@@ -33,6 +33,7 @@ class Config:
     quota_installer: int
     batch_max: int
     places_region: str
+    p2_memory_mb: int
     google_key: bool      # true once /solarrooftop/google_api_key exists (set_google_key.sh)
 
     @classmethod
@@ -53,6 +54,7 @@ class Config:
             quota_installer=int(ctx("quota_installer") or 100),
             batch_max=int(ctx("batch_max") or 25),
             places_region=str(ctx("places_region") or "ap-south-1"),
+            p2_memory_mb=int(ctx("p2_memory_mb") or 3008),
             google_key=str(ctx("google_key") or "false").lower() == "true",
         )
         for step in ("fetch", "segment", "simulate"):

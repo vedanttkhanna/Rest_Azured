@@ -188,3 +188,9 @@ def test_staged_docker_contexts_contain_their_dockerfiles(tmp_path):
     assert (p2 / "solar/handlers.py").is_file() and (p2 / "solar/requirements.lock.txt").is_file()
     assert (p2 / "contracts/schemas/C.schema.json").is_file()
     assert not (p2 / "solar/tests").exists() and not (p2 / "data").exists()
+
+
+def test_p2_memory_within_new_account_limit():
+    pipe = synth(fetch="real", simulate="real")["SolarPipeline"]
+    for f in pipe.find_resources("AWS::Lambda::Function").values():
+        assert f["Properties"].get("MemorySize", 128) <= 3008

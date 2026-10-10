@@ -29,6 +29,8 @@ ENDPOINT_NAME = "solarrooftop-seg"
 GOOGLE_KEY_PARAM = "/solarrooftop/google_api_key"  # SecureString, created by infra/scripts/set_google_key.sh
 # P2's image builds from the repo root with its own solar/Dockerfile.dockerignore. CDK stages the context using the
 # root .dockerignore (P1's: excludes everything but ml/serve), so re-include what solar/Dockerfile copies.
+# Docker Desktop's containerd store pushes OCI manifests by default; SageMaker accepts only Docker v2 manifests.
+DOCKER_V2_OUTPUT = ["type=docker,oci-mediatypes=false"]
 P2_CONTEXT_INCLUDE = ["!solar", "!solar/**", "!contracts", "!contracts/schemas", "!contracts/schemas/**",
                       "solar/.venv*", "solar/tests", "solar/validation", "**/__pycache__"]
 J = sfn.JsonPath
@@ -105,9 +107,9 @@ class PipelineStack(Stack):
             code=lambda_.DockerImageCode.from_image_asset(
                 str(REPO), file="solar/Dockerfile", cmd=[f"handlers.{step}_handler"],
                 platform=ecr_assets.Platform.LINUX_AMD64,
-                exclude=P2_CONTEXT_INCLUDE, ignore_mode=IgnoreMode.DOCKER),
+                exclude=P2_CONTEXT_INCLUDE, ignore_mode=IgnoreMode.DOCKER, outputs=DOCKER_V2_OUTPUT),
             architecture=lambda_.Architecture.X86_64,
-            memory_size=4096,
+            memory_size=self.cfg.p2_memory_mb,  # new accounts are capped at 3008 MB until a quota increase
             timeout=Duration.seconds(180),  # live Esri/Overture/PVGIS calls; P2 measured 8-38 s per simulation
             ephemeral_storage_size=Size.mebibytes(2048),
             environment=environment,
@@ -131,7 +133,7 @@ class PipelineStack(Stack):
             self, "SegImage", directory=str(REPO), file="ml/serve/Dockerfile",
             platform=ecr_assets.Platform.LINUX_AMD64,
             # P1's root .dockerignore whitelists only the sources, so CDK's context staging would drop the Dockerfile.
-            exclude=["!ml/serve/Dockerfile"], ignore_mode=IgnoreMode.DOCKER)
+            exclude=["!ml/serve/Dockerfile"], ignore_mode=IgnoreMode.DOCKER, outputs=DOCKER_V2_OUTPUT)
         model_data = s3_assets.Asset(self, "SegModelData", path=str(cfg.model_tar))
 
         role = iam.Role(self, "SageMakerRole", assumed_by=iam.ServicePrincipal("sagemaker.amazonaws.com"))
