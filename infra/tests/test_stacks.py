@@ -128,7 +128,7 @@ def test_segment_real_creates_serverless_endpoint(tmp_path):
     pipe = synth(segment="real", model_tar=str(model))["SolarPipeline"]
     pipe.has_resource_properties("AWS::SageMaker::EndpointConfig", {
         "ProductionVariants": [Match.object_like({
-            "ServerlessConfig": {"MemorySizeInMB": 4096, "MaxConcurrency": 2},
+            "ServerlessConfig": {"MemorySizeInMB": 3072, "MaxConcurrency": 2},
             "InstanceType": Match.absent(),
         })],
     })

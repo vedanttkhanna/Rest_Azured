@@ -10,7 +10,7 @@
     "simulate": "stub",
     "model_tar": "data/models/package/model.tar.gz",
     "model_version": "segformer-b2-delhi-fp-v1",
-    "seg_memory_mb": 4096,
+    "seg_memory_mb": 3072,
     "seg_max_concurrency": 2,
     "web_origins": "http://localhost:5173",
     "quota_homeowner": 20,

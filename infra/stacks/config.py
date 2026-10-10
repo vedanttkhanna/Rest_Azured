@@ -45,7 +45,7 @@ class Config:
             simulate=str(ctx("simulate") or "stub"),
             model_tar=REPO / str(ctx("model_tar") or "data/models/package/model.tar.gz"),
             model_version=str(ctx("model_version") or "segformer-b2-delhi-fp-v1"),
-            seg_memory_mb=int(ctx("seg_memory_mb") or 4096),
+            seg_memory_mb=int(ctx("seg_memory_mb") or 3072),
             seg_max_concurrency=int(ctx("seg_max_concurrency") or 2),
             web_origins=_list(ctx("web_origins") or "http://localhost:5173"),
             # Team e-mails for budget + failure alerts. Kept out of git: set SOLAR_ALERT_EMAILS or -c alert_emails=a,b
