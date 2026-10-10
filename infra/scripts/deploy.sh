@@ -14,5 +14,17 @@ export BUILDX_NO_DEFAULT_ATTESTATIONS=1
 
 if [ -d ../.venv/Scripts ]; then export PATH="$PWD/../.venv/Scripts:$PATH"; else export PATH="$PWD/../.venv/bin:$PATH"; fi
 
+# Synth with the same -c context options (deploy-only flags like --require-approval are not synth options).
+ctx=(); args=("$@")
+for ((i = 0; i < ${#args[@]}; i++)); do
+  case "${args[$i]}" in
+    -c|--context) ctx+=("-c" "${args[$((i + 1))]}"); i=$((i + 1)) ;;
+    -c=*|--context=*) ctx+=("${args[$i]}") ;;
+  esac
+done
+cdk synth --quiet "${ctx[@]}"
+if grep -q '"dockerImages": {' cdk.out/*.assets.json 2>/dev/null && grep -q '"dockerFile"' cdk.out/*.assets.json; then
+  python scripts/prebuild_images.py   # Docker v2 manifests for SageMaker (see the script)
+fi
 cdk deploy --all "$@"
 python scripts/export_env.py
