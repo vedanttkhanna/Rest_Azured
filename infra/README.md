@@ -18,10 +18,14 @@ Each pipeline step is a stub (serves `contracts/fixtures`) or the real component
 | Context | `stub` (default) | `real` |
 |---|---|---|
 | `fetch` | `backend/stubs` | P2 Lambda image from `solar/Dockerfile`, `handlers.fetch_handler` |
-| `segment` | `backend/stubs` | P1 container `ml/serve/Dockerfile` + `data/models/package/model.tar.gz` on SageMaker Serverless (4096 MB, MaxConcurrency 2) + `backend/invoke_sagemaker` |
+| `segment` | `backend/stubs` | P1 container `ml/serve/Dockerfile` + `data/models/package/model.tar.gz` on SageMaker Serverless (3072 MB = new-account max, MaxConcurrency 2) + `backend/invoke_sagemaker` |
 | `simulate` | `backend/stubs` | P2 Lambda image, `handlers.simulate_handler` |
 
-Example: `infra/scripts/deploy.sh -c segment=real` (P1 real, P2 stubbed). Stub results always describe the fixture building.
+**Current deployment (2026-10-11): all three real** - `infra/scripts/deploy.sh -c fetch=real -c segment=real -c simulate=real`.
+Always pass the same three flags on every deploy; omitting one switches that step back to the stub (and `segment` back to stub deletes the endpoint).
+Stub results always describe the fixture building.
+
+Local end-to-end run without AWS or Docker (P2 env + P1 server): see the docstring of [scripts/local_pipeline.py](scripts/local_pipeline.py).
 
 ## Setup (Windows 11; also works on Linux/macOS)
 
@@ -73,3 +77,8 @@ Local Lambda run with SAM CLI (Docker running), using the synthesized template i
 - SSM SecureStrings can't be created by CloudFormation, hence `set_google_key.sh`.
 - Step Functions' overall 5-min timeout skips the Catch; the API reports jobs stuck > 7 min as `failed`.
 - No VPC anywhere (a NAT gateway alone is ~$40/month); a CDK test enforces it.
+- **New-account quotas:** Lambda memory <= 3008 MB (P2 functions use `p2_memory_mb`=3008), SageMaker serverless memory <= 3072 MB per endpoint. Raise via Service Quotas if needed.
+- **SageMaker rejects OCI image manifests**, which Docker Desktop's containerd store produces. `deploy.sh` runs `scripts/prebuild_images.py` after synth to build each image asset as `cdkasset-<id>` with `oci-mediatypes=false`; CDK then only pushes it. (CDK's own `outputs` option crashes CDK CLI 2.1145: `x.replace is not a function`.)
+- P1's root `.dockerignore` whitelists only P1's sources; the CDK assets re-include `ml/serve/Dockerfile` and P2's `solar/` + `contracts/schemas/` (test: `test_staged_docker_contexts_contain_their_dockerfiles`).
+- Cold start after idle: first job ~2 min (P2 image load ~70 s in fetch, ~35 s in simulate, endpoint ~10 s); warm jobs 16-22 s. Run one job before a demo.
+- `deploy.sh` needs Docker Desktop running and `docker` on PATH when any step is `real`.

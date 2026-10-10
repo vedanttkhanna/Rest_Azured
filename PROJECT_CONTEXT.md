@@ -13,7 +13,7 @@ SolarRooftop AI lets homeowners and solar installers in **Delhi** assess rooftop
 - `contracts/` has schemas A (P3), B (P1), C (P2), real A/B/C fixtures, and `openapi.yaml` (P3). P1 code in `ml/`, P2 in `solar/`, P3 in `infra/` + `backend/`.
 - **Git:** remote `origin` = https://github.com/vedanttkhanna/Rest_Azured. Shared branch `p1` (P1 + P2); P3 developed on `p3` and merged `origin/p1` into it on 2026-10-11 (see Branch workflow).
 - Locations: P1/P2 machine `~/Desktop/SolarRooftop-AI/`; P3 machine `C:/Users/HP/Desktop/VS/AWS/Rest_Azured` (Windows 11). The P3 parent folder `C:/Users/HP/Desktop/VS/AWS/` has stale pre-Git copies of the docs — not the project.
-- P3 code: `infra/` (CDK, 3 stacks) and `backend/` (Lambdas); how to run: `infra/README.md`. **Deployed 2026-10-11** to account 336881700677 / ap-south-1 (stub steps); API `https://0cw3tjdvo2.execute-api.ap-south-1.amazonaws.com`.
+- P3 code: `infra/` (CDK, 3 stacks) and `backend/` (Lambdas); how to run: `infra/README.md`. **Deployed 2026-10-11** to account 336881700677 / ap-south-1 with **all three real steps** (P2 fetch/simulate Lambdas, P1 SageMaker Serverless endpoint `solarrooftop-seg`); API `https://0cw3tjdvo2.execute-api.ap-south-1.amazonaws.com`.
 - Local data lives in `data/` (git-ignored): `data/raw/RID_m1655470/RID_dataset/` (original TUM download, 1.4 GB) and `data/processed/rid_ours/{train,val,test}/{images,masks}` (converted, fold 1, 645 MB).
 
 ## Architecture (deployment planned; P1 local implementation exists)
@@ -74,6 +74,10 @@ The data contracts (A RoofJob, B Segmentation GeoJSON, C Report) and HTTP routes
 
 - **P1 model package** `model.tar.gz` sha256 `c345069342ba4ba71ecd074786e8c2e7a4d22004d106b192840f18b895f3a1ea` (101,587,119 bytes) — verified on the P3 machine 2026-10-10; stored at `data/models/package/` (git-ignored).
 - **Verified live in ap-south-1 (2026-10-11):** HTTP API + Cognito JWT, Step Functions, DynamoDB, S3, Location Service Places v2 geocoding. Presigned S3 URLs must use the regional host (virtual addressing) or S3 returns SignatureDoesNotMatch. `aws login` credentials require `botocore[crt]` in Python.
+- **New-account AWS quotas (verified 2026-10-11):** Lambda memory max 3008 MB; SageMaker serverless max 3072 MB per endpoint. SageMaker rejects OCI image manifests (Docker Desktop containerd-store default); images must be Docker v2 (`infra/scripts/prebuild_images.py`). Lambda accepts both.
+- **P2 Lambda image needs `expat`** on top of `public.ecr.aws/lambda/python:3.12` (rasterio import fails otherwise).
+- **Measured on AWS (2026-10-11):** warm job 16-22 s end to end; cold first job ~2 min (P2 container cold start dominates). Results identical to local runs for the same coordinates.
+- **Always deploy with `SOLAR_ALERT_EMAILS` set and the same `-c fetch/segment/simulate` flags** (deploying the pipeline stack without emails removes the failure alarm).
 - **Always deploy SolarCore with `SOLAR_ALERT_EMAILS` set** — without it the budget and alert subscriptions are removed.
 - **Windows Python** defaults to cp1252 for `Path.read_text()`; our JSON schemas contain non-ASCII (—, ×). Always pass `encoding="utf-8"`.
 
@@ -87,7 +91,7 @@ PM Surya Ghar subsidy amounts (₹30k/kW ≤2 kW, ₹18k 3rd kW, cap ₹78k); ca
 
 ## Known issues
 
-- P1's container image has never been built with Docker (neither P1 nor P3 yet). P2's Lambda image: Docker build also not verified yet.
+- Geocoded addresses can land on a neighbouring building (seen in Mayur Vihar); the UI should let users confirm/move the pin.
 - **Open risk — small obstacles may be invisible at available resolution.** Delhi imagery is satellite (~0.3–0.5 m/px), not ~0.1 m aerial like RID. A 1,000 L water tank (~1.1 m) is only ~2–4 px, so per-object detection of tanks / AC units may not be feasible. Stair rooms (~3×3 m, cast shadows) are more likely detectable. Not yet checked against real Delhi tiles. Fallback plan: merge obstacles into one `obstacle` class and apply a usable-area derating factor.
 
 ## P2 integration audit (2026-10-10)
