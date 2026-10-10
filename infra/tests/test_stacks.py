@@ -1,6 +1,7 @@
 """CDK assertion tests: synthesize the app (no AWS access needed) and check cost/safety guardrails."""
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -113,8 +114,9 @@ def test_state_machine_has_timeout_and_catch(stub_templates):
     pipe = stub_templates["SolarPipeline"]
     sm = next(iter(pipe.find_resources("AWS::StepFunctions::StateMachine").values()))
     definition = "".join(p if isinstance(p, str) else "<ref>" for p in sm["Properties"]["DefinitionString"]["Fn::Join"][1])
-    assert '"TimeoutSeconds":300' in definition
-    for state in ("SetFetching", "Fetch", "SetSegmenting", "Segment", "SetSimulating", "Simulate", "Save",
+    assert '"TimeoutSeconds":600' in definition
+    for state in ("SetFetching", "Fetch", "JobAUri", "SetSegmenting", "Segment", "SetSimulating", "Simulate",
+                  "ReportUri", "Save",
                   "MarkFailed", "MarkNoRoof", "RoofFound?"):
         assert f'"{state}"' in definition, state
     assert '"ErrorEquals":["ModelBusy"]' in definition
@@ -141,3 +143,24 @@ def test_segment_real_without_model_fails(tmp_path):
 def test_bad_step_mode_rejected():
     with pytest.raises(ValueError, match="fetch"):
         synth(fetch="maybe")
+
+
+def test_p2_real_uses_one_image_with_s3_mode():
+    pipe = synth(fetch="real", simulate="real")["SolarPipeline"]
+    fns = {k: v for k, v in pipe.find_resources("AWS::Lambda::Function").items() if v["Properties"].get("PackageType") == "Image"}
+    assert len(fns) == 2
+    images = {json.dumps(f["Properties"]["Code"]["ImageUri"]) for f in fns.values()}
+    assert len(images) == 1  # same asset, different commands
+    for f in fns.values():
+        env = f["Properties"]["Environment"]["Variables"]
+        assert "JOBS_BUCKET" in env and env["HOME"] == "/tmp"
+        assert "GOOGLE_SOLAR_SSM_PARAMETER" not in env  # only with -c google_key=true
+        assert f["Properties"]["ImageConfig"]["Command"][0] in ("handlers.fetch_handler", "handlers.simulate_handler")
+
+
+def test_google_key_flag_wires_ssm_parameter():
+    pipe = synth(fetch="real", simulate="real", google_key="true")["SolarPipeline"]
+    pipe.has_resource_properties("AWS::Lambda::Function", {
+        "ImageConfig": {"Command": ["handlers.fetch_handler"]},
+        "Environment": {"Variables": Match.object_like({"GOOGLE_SOLAR_SSM_PARAMETER": "/solarrooftop/google_api_key"})},
+    })

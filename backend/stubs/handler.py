@@ -3,7 +3,7 @@
 Same event/return shapes as the real steps (see contracts/README.md, "Pipeline step interface"):
   fetch_handler     {job_id, lat, lng, address, bucket}            -> {job_a_s3_uri}
   segment_handler   {job_id, job_a_s3_uri, bucket}                 -> {seg_b_s3_uri, roof_count, warning}
-  simulate_handler  {job_id, job_a_s3_uri, seg_b_s3_uri, bucket}   -> {report_s3_uri}
+  simulate_handler  {job_id, bucket, A, B}                       -> {report_s3_uri}
 The fixture image is one Mayur Vihar building, so stub results always describe that building, whatever was asked.
 """
 from __future__ import annotations
@@ -59,6 +59,6 @@ def simulate_handler(event, context):
     time.sleep(DELAY)
     report = _fixture("report_C.json")
     report["job_id"] = event["job_id"]
-    report["heatmap_png_s3_uri"] = _copy_file("shade.png", event["bucket"], event["job_id"], "image/png")
+    report["heatmap_png_s3_uri"] = _copy_file("shade_C.png", event["bucket"], event["job_id"], "image/png")
     uri = s3util.write_json(event["bucket"], s3util.job_key(event["job_id"], "report_C.json"), report)
     return {"report_s3_uri": uri}

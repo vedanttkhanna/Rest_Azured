@@ -16,6 +16,7 @@
     "quota_homeowner": 20,
     "quota_installer": 100,
     "batch_max": 25,
-    "places_region": "ap-south-1"
+    "places_region": "ap-south-1",
+    "google_key": false
   }
 }

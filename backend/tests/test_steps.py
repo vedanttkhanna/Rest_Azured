@@ -37,11 +37,12 @@ def test_stub_pipeline_end_to_end(aws):
     assert b["roof_count"] == 1
     SCHEMA_B.validate(s3_json(b["seg_b_s3_uri"]))
 
-    c = stubs.simulate_handler({"job_id": job_id, **a, **b, "bucket": BUCKET}, None)
+    c = stubs.simulate_handler({"job_id": job_id, "bucket": BUCKET, "A": a["job_a_s3_uri"],
+                                "B": b["seg_b_s3_uri"]}, None)
     report = s3_json(c["report_s3_uri"])
     assert report["job_id"] == job_id
-    assert report["heatmap_png_s3_uri"] == f"s3://{BUCKET}/jobs/{job_id}/shade.png"
-    head = boto3.client("s3").head_object(Bucket=BUCKET, Key=f"jobs/{job_id}/shade.png")
+    assert report["heatmap_png_s3_uri"] == f"s3://{BUCKET}/jobs/{job_id}/shade_C.png"
+    head = boto3.client("s3").head_object(Bucket=BUCKET, Key=f"jobs/{job_id}/shade_C.png")
     assert head["ContentType"] == "image/png"
 
 

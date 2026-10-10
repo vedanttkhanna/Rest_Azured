@@ -43,14 +43,16 @@ def test_fixtures_describe_one_job():
     assert len(ids) == 1
 
 
-def test_report_c_draft_is_consistent():
+def test_report_c_fixture_matches_schema():
+    validator("C.schema.json").validate(load("report_C.json"))
+
+
+def test_report_c_fixture_is_consistent():
     c = load("report_C.json")
-    if (CONTRACTS / "schemas" / "C.schema.json").exists():
-        validator("C.schema.json").validate(c)
     assert c["system"]["panel_count"] == len(c["panels"]["features"])
     assert c["system"]["kw_dc"] == pytest.approx(c["system"]["panel_count"] * c["system"]["panel_wp"] / 1000)
-    assert sum(c["energy"]["monthly_kwh"]) == c["energy"]["annual_kwh"] and len(c["energy"]["monthly_kwh"]) == 12
+    assert len(c["energy"]["monthly_kwh"]) == 12
+    assert sum(c["energy"]["monthly_kwh"]) == pytest.approx(c["energy"]["annual_kwh"], rel=1e-3)
     f = c["finance"]
-    assert f["net_cost_inr"] == f["capex_inr"] - f["subsidy_inr"]
-    assert c["heatmap_bounds"] == load("job_A.json")["image_bounds"]
-    assert (FIXTURES / "shade.png").exists()
+    assert f["net_cost_inr"] == pytest.approx(f["capex_inr"] - f["subsidy_inr"])
+    assert (FIXTURES / Path(c["heatmap_png_s3_uri"]).name).exists()

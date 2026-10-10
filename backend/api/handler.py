@@ -33,8 +33,8 @@ BATCH_MAX = int(os.environ.get("BATCH_MAX", "25"))
 # Delhi/NCR demo bounding box: min_lat, min_lng, max_lat, max_lng
 BBOX = [float(x) for x in os.environ.get("BBOX", "28.4,76.8,28.9,77.4").split(",")]
 PRESIGN_SECONDS = 900
-# The state machine times out after 5 min; a timeout skips its Catch, so the job would stay "running" forever.
-STALE_AFTER = timedelta(minutes=7)
+# The state machine times out after 10 min; a timeout skips its Catch, so the job would stay "running" forever.
+STALE_AFTER = timedelta(minutes=12)
 RUNNING = ("queued", "fetching", "segmenting", "simulating")
 LIST_FIELDS = ("job_id", "status", "address", "lat", "lng", "created_at", "updated_at",
                "kw_dc", "annual_kwh", "payback_years")

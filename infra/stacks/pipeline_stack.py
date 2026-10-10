@@ -2,10 +2,12 @@
 
 Execution input (from the api Lambda): {job_id, owner_sub, lat, lng, address, bucket}.
 Steps exchange S3 URIs, not documents (Step Functions payload limit is 256 KB). Interface: contracts/README.md.
+P2's handlers return A / C inline and write them to jobs/{job_id}/job_A.json and report_C.json; the state machine
+discards the inline result and passes those deterministic S3 URIs on.
 """
 from __future__ import annotations
 
-from aws_cdk import Aws, CfnOutput, Duration, RemovalPolicy, Stack
+from aws_cdk import Aws, CfnOutput, Duration, IgnoreMode, RemovalPolicy, Size, Stack
 from aws_cdk import aws_cloudwatch as cw
 from aws_cdk import aws_cloudwatch_actions as cw_actions
 from aws_cdk import aws_ecr_assets as ecr_assets
@@ -25,6 +27,10 @@ from stacks.packaging import REPO, python_asset
 
 ENDPOINT_NAME = "solarrooftop-seg"
 GOOGLE_KEY_PARAM = "/solarrooftop/google_api_key"  # SecureString, created by infra/scripts/set_google_key.sh
+# P2's image builds from the repo root with its own solar/Dockerfile.dockerignore. CDK stages the context using the
+# root .dockerignore (P1's: excludes everything but ml/serve), so re-include what solar/Dockerfile copies.
+P2_CONTEXT_INCLUDE = ["!solar", "!solar/**", "!contracts", "!contracts/schemas", "!contracts/schemas/**",
+                      "solar/.venv*", "solar/tests", "solar/validation", "**/__pycache__"]
 J = sfn.JsonPath
 
 
@@ -40,7 +46,7 @@ class PipelineStack(Stack):
                 "handler.py": "backend/stubs/handler.py",
                 "common": "backend/common",
                 **{f"fixtures/{n}": f"contracts/fixtures/{n}"
-                   for n in ("job_A.json", "rgb.png", "seg_B.json", "report_C.json", "shade.png")},
+                   for n in ("job_A.json", "rgb.png", "seg_B.json", "report_C.json", "shade_C.png")},
             })
 
         def stub(step: str) -> lambda_.Function:
@@ -83,22 +89,34 @@ class PipelineStack(Stack):
     # ------------------------------------------------------------------ real components
 
     def _p2_function(self, step: str) -> lambda_.Function:
-        """P2's Lambda container image (solar/Dockerfile) with fetch_handler / simulate_handler."""
+        """P2's Lambda container image (solar/Dockerfile, see solar/README.md) with fetch_handler / simulate_handler.
+        Both functions use the same image (same asset hash); only the command differs."""
         if not (REPO / "solar" / "Dockerfile").exists():
             raise ValueError(f"{step}=real needs solar/Dockerfile (P2). Deploy with -c {step}=stub until it exists.")
+        environment = {
+            "JOBS_BUCKET": self.core.bucket.bucket_name,  # switches P2's Store to S3 mode
+            "HOME": "/tmp",  # only /tmp is writable in Lambda (library caches, Overture CLI)
+        }
+        if step == "fetch" and self.cfg.google_key:
+            # Only once the parameter exists (set_google_key.sh): P2 fails hard if it is configured but missing.
+            environment["GOOGLE_SOLAR_SSM_PARAMETER"] = GOOGLE_KEY_PARAM
         fn = lambda_.DockerImageFunction(
             self, f"{step.capitalize()}Fn",
             code=lambda_.DockerImageCode.from_image_asset(
-                str(REPO / "solar"), cmd=[f"handlers.{step}_handler"], platform=ecr_assets.Platform.LINUX_AMD64),
+                str(REPO), file="solar/Dockerfile", cmd=[f"handlers.{step}_handler"],
+                platform=ecr_assets.Platform.LINUX_AMD64,
+                exclude=P2_CONTEXT_INCLUDE, ignore_mode=IgnoreMode.DOCKER),
             architecture=lambda_.Architecture.X86_64,
             memory_size=4096,
-            timeout=Duration.seconds(120),
-            environment={"BUCKET": self.core.bucket.bucket_name, "GOOGLE_API_KEY_PARAM": GOOGLE_KEY_PARAM},
+            timeout=Duration.seconds(180),  # live Esri/Overture/PVGIS calls; P2 measured 8-38 s per simulation
+            ephemeral_storage_size=Size.mebibytes(2048),
+            environment=environment,
             description=f"P2 {step} step",
             log_group=log_group(self, f"{step.capitalize()}FnLogs"),
         )
         self.core.bucket.grant_read_write(fn, "jobs/*")
-        if step == "fetch":
+        self.core.bucket.grant_read_write(fn, "weather/*")  # P2's PVGIS weather cache per 0.05 deg cell
+        if "GOOGLE_SOLAR_SSM_PARAMETER" in environment:
             fn.add_to_role_policy(iam.PolicyStatement(
                 actions=["ssm:GetParameter"],
                 resources=[f"arn:aws:ssm:{Aws.REGION}:{Aws.ACCOUNT_ID}:parameter{GOOGLE_KEY_PARAM}"]))
@@ -177,12 +195,17 @@ class PipelineStack(Stack):
             result_path=J.DISCARD,
         )
 
-    def _invoke(self, id: str, fn: lambda_.IFunction, payload: dict, result: dict) -> tasks.LambdaInvoke:
-        """Invoke a step Lambda; its selected return fields land at $.<id lowercased>."""
+    def _invoke(self, id: str, fn: lambda_.IFunction, payload: dict, result: dict | None) -> tasks.LambdaInvoke:
+        """Invoke a step Lambda; selected return fields land at $.<id lowercased>, or the result is discarded."""
         return tasks.LambdaInvoke(
             self, id, lambda_function=fn, payload=sfn.TaskInput.from_object(payload),
-            result_selector=result, result_path=f"$.{id.lower()}",
+            result_selector=result, result_path=f"$.{id.lower()}" if result else J.DISCARD,
         )
+
+    def _job_uri(self, id: str, name: str, result_key: str, path: str) -> sfn.Pass:
+        """Pass state that sets $.<path>.<result_key> = s3://<bucket>/jobs/<job_id>/<name>."""
+        uri = J.format("s3://{}/jobs/{}/" + name, J.string_at("$.bucket"), J.string_at("$.job_id"))
+        return sfn.Pass(self, id, parameters={result_key: uri}, result_path=f"$.{path}")
 
     def _state_machine(self, fetch_fn, segment_fn, simulate_fn, save_fn) -> sfn.StateMachine:
         table = self.core.jobs_table
@@ -216,7 +239,8 @@ class PipelineStack(Stack):
         fetch = self._invoke("Fetch", fetch_fn,
                              {"job_id": job_id, "lat": J.number_at("$.lat"), "lng": J.number_at("$.lng"),
                               "address": J.string_at("$.address"), "bucket": bucket_name},
-                             {"job_a_s3_uri": J.string_at("$.Payload.job_a_s3_uri")})
+                             None)
+        fetched = self._job_uri("JobAUri", "job_A.json", "job_a_s3_uri", "fetch")
         segment = self._invoke("Segment", segment_fn,
                                {"job_id": job_id, "job_a_s3_uri": J.string_at("$.fetch.job_a_s3_uri"),
                                 "bucket": bucket_name},
@@ -224,25 +248,30 @@ class PipelineStack(Stack):
                                 "roof_count": J.number_at("$.Payload.roof_count")})
         # Serverless endpoint: throttled (MaxConcurrency) or cold-starting -> back off and retry.
         segment.add_retry(errors=["ModelBusy"], interval=Duration.seconds(10), max_attempts=4, backoff_rate=2)
+        # P2 contract: {"A": uri, "B": uri}; job_id/bucket are used by the stub.
         simulate = self._invoke("Simulate", simulate_fn,
-                                {"job_id": job_id, "job_a_s3_uri": J.string_at("$.fetch.job_a_s3_uri"),
-                                 "seg_b_s3_uri": J.string_at("$.segment.seg_b_s3_uri"), "bucket": bucket_name},
-                                {"report_s3_uri": J.string_at("$.Payload.report_s3_uri")})
+                                {"job_id": job_id, "bucket": bucket_name,
+                                 "A": J.string_at("$.fetch.job_a_s3_uri"), "B": J.string_at("$.segment.seg_b_s3_uri")},
+                                None)
+        simulated = self._job_uri("ReportUri", "report_C.json", "report_s3_uri", "simulate")
         save = self._invoke("Save", save_fn,
                             {"job_id": job_id, "owner_sub": J.string_at("$.owner_sub"),
                              "report_s3_uri": J.string_at("$.simulate.report_s3_uri")},
                             {"status": J.string_at("$.Payload.status")})
 
-        steps = [self._set_status("SetFetching", "fetching"), fetch,
+        steps = [self._set_status("SetFetching", "fetching"), fetch, fetched,
                  self._set_status("SetSegmenting", "segmenting"), segment]
-        tail = [self._set_status("SetSimulating", "simulating"), simulate, save]
+        tail = [self._set_status("SetSimulating", "simulating"), simulate, simulated, save]
         for state in steps + tail:
-            state.add_catch(mark_failed, errors=["States.ALL"], result_path="$.error")
+            if not isinstance(state, sfn.Pass):
+                state.add_catch(mark_failed, errors=["States.ALL"], result_path="$.error")
 
+        tail_chain = sfn.Chain.start(tail[0])
+        for state in tail[1:]:
+            tail_chain = tail_chain.next(state)
         has_roof = (sfn.Choice(self, "RoofFound?")
                     .when(sfn.Condition.number_equals("$.segment.roof_count", 0), mark_no_roof)
-                    .otherwise(sfn.Chain.start(tail[0]).next(tail[1]).next(tail[2])
-                               .next(sfn.Succeed(self, "Done"))))
+                    .otherwise(tail_chain.next(sfn.Succeed(self, "Done"))))
         chain = sfn.Chain.start(steps[0])
         for state in steps[1:]:
             chain = chain.next(state)
@@ -253,6 +282,6 @@ class PipelineStack(Stack):
             state_machine_name="solarrooftop-pipeline",
             state_machine_type=sfn.StateMachineType.STANDARD,
             definition_body=sfn.DefinitionBody.from_chainable(chain),
-            timeout=Duration.minutes(5),
+            timeout=Duration.minutes(10),
             logs=sfn.LogOptions(destination=log_group(self, "PipelineLogs"), level=sfn.LogLevel.ERROR),
         )
