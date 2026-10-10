@@ -95,3 +95,7 @@ PM Surya Ghar subsidy amounts (₹30k/kW ≤2 kW, ₹18k 3rd kW, cap ₹78k); ca
 
 - Overture must be invoked through its installed console entry point (`overturemaps.cli:cli`); `python -m overturemaps` is unsupported. Force UTF-8 in the subprocess for non-ASCII building names on Windows. Footprint downloads are validated before atomic replacement to prevent interrupted downloads from becoming cached inputs.
 - The repeatable P2 validation tools separate PVGIS energy-model agreement from P1-to-P2 real-building execution and independent survey accuracy. Real imagery plus model predictions are not ground truth; keep absent survey/Google reference values empty.
+
+## Branch workflow
+
+The user prefers the existing shared `p1` branch for this project, including P2 work. Continue on `p1`; do not create per-component branches unless requested.

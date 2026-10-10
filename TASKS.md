@@ -55,6 +55,13 @@ Implement P2 only: local solar/geospatial engine and handoff artifacts. Complete
 
 ## Handoff log
 
+### 2026-10-11 ? Codex ? consolidate progress onto p1
+- **Authorization/decision:** user explicitly requested pushing P2 progress onto existing `p1`; continue using that shared branch.
+- **Files changed:** `PROJECT_CONTEXT.md` (branch preference), `TASKS.md` (handoff). Application code unchanged.
+- **Commands/results:** fetched origin, switched to `p1`, `git merge --ff-only origin/p1` was already up to date; `git merge --ff-only p2` advanced p1 from bc5e040 to c7110b0 without conflicts. Publishing this state and workflow note with a normal push; no history rewrite or branch deletion.
+- **Tests:** not rerun for branch/documentation-only work; existing P2 validation results remain recorded below.
+- **Unresolved/next step:** remaining P2 external validation is unchanged; configure Google Solar credentials and run the coverage check.
+
 ### 2026-10-11 — Codex — P2 live validation and publication handoff
 - **Files:** P2 implementation under `solar/`, C additions `contracts/schemas/C.schema.json` and `contracts/fixtures/{report_C.json,shade_C.png}`, plus `PROJECT_CONTEXT.md` and `TASKS.md`. No P1/P3/P4 code changes. Detailed file inventory is in the implementation entry below.
 - **Live fixes:** `solar/solar/providers.py` invokes Overture's real console entry point with UTF-8 (Hindi names failed under Windows cp1252), validates complete GeoJSON, and atomically replaces downloads. `solar/tests/test_fetch.py` covers interrupted/invalid output, cache preservation and Unicode. `solar/validation/validate_buildings.py` resumes completed samples and retries invalid caches with a batch-only 120-second footprint timeout; production remains 35 seconds.
