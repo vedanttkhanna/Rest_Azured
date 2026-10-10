@@ -1,0 +1,10 @@
+**
+!solar/
+!solar/solar/
+!solar/solar/**
+!solar/handlers.py
+!solar/requirements.lock.txt
+!solar/Dockerfile
+!contracts/
+!contracts/schemas/
+!contracts/schemas/*.json

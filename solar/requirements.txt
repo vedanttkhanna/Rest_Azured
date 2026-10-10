@@ -1,0 +1,12 @@
+numpy>=1.26,<3
+pandas>=2.2,<3
+pvlib>=0.13,<0.17
+rasterio>=1.4,<2
+shapely>=2.0,<3
+pyproj>=3.6,<4
+pillow>=10,<13
+PyYAML>=6,<7
+jsonschema>=4.23,<5
+boto3>=1.35,<2
+requests>=2.32,<3
+overturemaps>=0.17,<1
