@@ -1,7 +1,7 @@
 # PROJECT_CONTEXT.md — durable knowledge
 
 Facts and decisions that stay true across tasks. Progress tracking goes in `TASKS.md`, not here.
-Last updated: 2026-10-10.
+Last updated: 2026-10-11.
 
 ## Purpose
 
@@ -10,13 +10,13 @@ SolarRooftop AI lets homeowners and solar installers in **Delhi** assess rooftop
 ## Current state of the repo (verified 2026-10-10)
 
 - Contains planning docs (four role briefs `P1_ML_Segmentation.md`, `P2_Solar_Geospatial.md`, `P3_Backend_Cloud.md`, `P4_Frontend_Product.md`), these context files, and ML scripts in `ml/` (data conversion, Delhi tile download, training, inference).
-- `contracts/` has schema B + real fixtures; `ml/tests/` has contract-B tests. Schemas A and C not written yet.
-- **Git:** remote `origin` = https://github.com/vedanttkhanna/Rest_Azured. Branches: `p1` (P1's work, no `main` yet), `p3` (P3 backend/infra, branched from `p1`).
-- Locations: P1 machine `~/Desktop/SolarRooftop-AI/`; P3 machine `C:/Users/HP/Desktop/VS/AWS/Rest_Azured` (Windows 11). The P3 parent folder `C:/Users/HP/Desktop/VS/AWS/` has stale pre-Git copies of the docs — not the project.
+- `contracts/` has schemas A (P3), B (P1), C (P2), real A/B/C fixtures, and `openapi.yaml` (P3). P1 code in `ml/`, P2 in `solar/`, P3 in `infra/` + `backend/`.
+- **Git:** remote `origin` = https://github.com/vedanttkhanna/Rest_Azured. Shared branch `p1` (P1 + P2); P3 developed on `p3` and merged `origin/p1` into it on 2026-10-11 (see Branch workflow).
+- Locations: P1/P2 machine `~/Desktop/SolarRooftop-AI/`; P3 machine `C:/Users/HP/Desktop/VS/AWS/Rest_Azured` (Windows 11). The P3 parent folder `C:/Users/HP/Desktop/VS/AWS/` has stale pre-Git copies of the docs — not the project.
 - P3 code: `infra/` (CDK, 3 stacks) and `backend/` (Lambdas); how to run: `infra/README.md`. **Deployed 2026-10-11** to account 336881700677 / ap-south-1 (stub steps); API `https://0cw3tjdvo2.execute-api.ap-south-1.amazonaws.com`.
 - Local data lives in `data/` (git-ignored): `data/raw/RID_m1655470/RID_dataset/` (original TUM download, 1.4 GB) and `data/processed/rid_ours/{train,val,test}/{images,masks}` (converted, fold 1, 645 MB).
 
-## Architecture (planned — nothing implemented yet)
+## Architecture (deployment planned; P1 local implementation exists)
 
 ```
 web (Amplify) → API Gateway (Cognito JWT) → api Lambda (Cedar authz, DynamoDB, Location Service geocoding)
@@ -87,6 +87,30 @@ PM Surya Ghar subsidy amounts (₹30k/kW ≤2 kW, ₹18k 3rd kW, cap ₹78k); ca
 
 ## Known issues
 
-- `contracts/schemas/C.schema.json` not written yet (P2). `contracts/fixtures/report_C.json` + `shade.png` are a P3 DRAFT placeholder (illustrative numbers).
-- P1's container image has never been built with Docker (neither P1 nor P3 yet).
+- P1's container image has never been built with Docker (neither P1 nor P3 yet). P2's Lambda image: Docker build also not verified yet.
 - **Open risk — small obstacles may be invisible at available resolution.** Delhi imagery is satellite (~0.3–0.5 m/px), not ~0.1 m aerial like RID. A 1,000 L water tank (~1.1 m) is only ~2–4 px, so per-object detection of tanks / AC units may not be feasible. Stair rooms (~3×3 m, cast shadows) are more likely detectable. Not yet checked against real Delhi tiles. Fallback plan: merge obstacles into one `obstacle` class and apply a usable-area derating factor.
+
+## P2 integration audit (2026-10-10)
+
+- Contract B and C schemas and A/B/C fixtures exist. Schema A remains P3 work.
+- P1 requires centered 512x512 RGB imagery and interprets bounds through Web Mercator (ml/serve/serve.py and segment.py). Normalize either imagery provider to this grid; use UTM 43N separately for simulation.
+- B contains the target roof and its obstacles only. P2 must acquire neighboring building footprints/heights separately for shading. Current fixtures have no DSM or neighbors.
+- Current P1 returns flat roofs and unknown obstacle heights. Preserve segmentation warnings and disclose defaults in report assumptions.
+- Esri scale-2 output pixels (~0.13 m) upsample source pixels (~0.26 m), adding no physical detail.
+- Existing ML tests expect extracted weights in data/models/segformer_b2_delhi_fp/best and serving archive in data/models/package/model.tar.gz. A root-level download does not satisfy these paths.
+
+## P2 implementation (2026-10-10)
+
+- Local entry points, deployment handoff and reproducible commands: `solar/README.md`. P2 code is independent of ML inference; it consumes A/B fixtures or P1 output. P1/P3/P4 code is untouched.
+- Fetch normalizes imagery to P1 geometry and stores neighbor/height/provenance sidecars at deterministic job keys without changing A. Simulate returns C, panel GeoJSON and a Web-Mercator-aligned transparent heatmap. Shared C schema and fixture are P2 deliverables; nullable payback for zero savings should be reviewed with consumers.
+- Geometry/shading are UTM 43N with true-north/grid-north correction. PVGIS irradiance timestamp offsets are honored; geometric shading affects beam only. Soiling is included in the configured total DC loss, not deducted twice.
+- Synthetic and measured DSM paths are separate; estimated obstacles are never added again to a measured DSM. Open Buildings raster ingestion is supported; live Earth Engine export requires optional dependencies and credentials.
+- No-roof inputs raise an error; valid roofs with no fitting panels produce zero generation and null payback. Unknown neighboring context and upstream warnings remain visible in report assumptions.
+- Assumptions and source limitations: `solar/docs/assumptions.md`. External coverage/field validation status belongs in `solar/docs/coverage_delhi.md`, `solar/validation/README.md` and TASKS.md.
+
+- Overture must be invoked through its installed console entry point (`overturemaps.cli:cli`); `python -m overturemaps` is unsupported. Force UTF-8 in the subprocess for non-ASCII building names on Windows. Footprint downloads are validated before atomic replacement to prevent interrupted downloads from becoming cached inputs.
+- The repeatable P2 validation tools separate PVGIS energy-model agreement from P1-to-P2 real-building execution and independent survey accuracy. Real imagery plus model predictions are not ground truth; keep absent survey/Google reference values empty.
+
+## Branch workflow
+
+The user prefers the existing shared `p1` branch for this project, including P2 work. Continue on `p1`; do not create per-component branches unless requested.
