@@ -1,0 +1,10 @@
+{
+  "port": 8765,
+  "model_dir": "data/models/segformer_b2_delhi_fp/best",
+  "model_version": "segformer-b2-delhi-fp-v1",
+  "workspace": "data/local",
+  "torch_threads": 4,
+  "max_batch": 25,
+  "max_request_bytes": 65536,
+  "region": "ap-south-1"
+}

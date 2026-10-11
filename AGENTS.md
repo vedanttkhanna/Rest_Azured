@@ -44,9 +44,9 @@ AWS region: `ap-south-1`. **Do not use AWS App Runner** (closed to new customers
 
 Run from the repo root. SageMaker build/deploy steps for P3: `ml/serve/README.md`. `ml/` (P1) and `infra/` + `backend/` (P3) exist; other owners add their own verified commands here.
 
-**ml/ (verified 2026-10-10 on Apple M5, macOS):**
+**ml/ (verified 2026-10-10 on Apple M5; CPU loading/tests/HTTP reverified 2026-10-11 on macOS, Python 3.12.15):**
 ```bash
-uv venv ml/.venv --python 3.12 && uv pip install --python ml/.venv/bin/python -r ml/requirements.txt
+uv venv ml/.venv --python 3.12 && uv pip install --python ml/.venv/bin/python -r ml/requirements.txt -r ml/serve/requirements-serve.txt
 ml/.venv/bin/python ml/data/rid_to_ours.py --rid-data data/raw/RID_m1655470/RID_dataset --out data/processed/rid_ours --fold 1
 ml/.venv/bin/python ml/train/train.py --epochs 1 --limit 200 --out data/models/bench   # smoke test (~2 min)
 ml/.venv/bin/python ml/data/download_delhi_tiles.py --out data/raw/delhi_tiles --grid 3 --scale 2
@@ -59,6 +59,8 @@ ml/.venv/bin/python ml/serve/invoke.py --url http://localhost:8080
 ml/.venv/bin/python -m pytest ml/tests -q    # 13 tests; model/package tests skip if weights or package missing
 ```
 
+Local environment activation, offline verification, service startup and the project-local `uv` location: [ml/README.md](ml/README.md). The 2026-10-11 run passed all 13 tests without skips; `/ping` and fixture HTTP inference returned valid B in 1.03 s. This was local CPU execution, not a new AWS/container test.
+
 **infra/ + backend/ + contracts/ tests (P3, verified 2026-10-10 on Windows 11; use `.venv/bin/` on Linux/macOS):**
 ```bash
 uv venv .venv --python 3.12 && uv pip install --python .venv/Scripts/python.exe -r infra/requirements-dev.txt
@@ -67,6 +69,26 @@ uv venv .venv --python 3.12 && uv pip install --python .venv/Scripts/python.exe 
 cd infra && PATH="$PWD/../.venv/Scripts:$PATH" cdk synth --quiet                 # needs Node + `npm i -g aws-cdk`
 ```
 Deploy / health check / smoke / teardown (P3 only, needs AWS credentials; settings in the git-ignored root `.env`): see `infra/README.md`. Verified 2026-10-11: `infra/scripts/deploy.sh` (all real), `.venv/Scripts/python.exe infra/scripts/check.py` -> ALL GOOD, `infra/scripts/smoke.py` -> ALL PASSED.
+
+**web/ (P4, verified 2026-10-11 on macOS, Node 26):**
+
+Configure the git-ignored environment files first; see `web/README.md` and `docs/HANDOFF_P4.md`. Run these inside `web/`:
+
+```bash
+npm install                         # npm ci on subsequent/fresh checkouts
+npm run generate:types              # A/B/C declarations from unchanged schemas
+npm test                            # 19 passing unit/integration tests
+npm run build                       # strict TypeScript + production bundle
+npx playwright install chromium webkit
+npm run test:e2e                    # 8 passing demo-flow checks, desktop + iPhone WebKit
+SOLAR_E2E_PRODUCTION=true npm run test:e2e  # 2 passing built sign-in/sample checks (macOS/Linux)
+npm run dev                         # real local P1/P2 job API + GUI at http://localhost:5173
+npm run dev:demo                    # explicit fixed Mayur Vihar fixture demo
+SOLAR_E2E_LOCAL=true npm run test:e2e # real local scans/batches, requires model + solar environment
+npm run dev:live                     # real Cognito/API; authenticated AWS round trip not verified by P4
+```
+
+Local GUI setup and credentials/coordinate behavior: `web/README.md`. Local pipeline regression checks from the repo root: `ml/.venv/bin/python -m pytest ml/tests solar/tests web/local/test_server.py -q` (80 passed on 2026-10-11). Browser tests use emulated devices and do not submit AWS jobs. Use `SOLAR_E2E_PORT=5174` for demo/production checks while the real local GUI runs on 5173. Hosting deployment and deployed-origin CORS remain P3-owned.
 
 ## Constraints
 

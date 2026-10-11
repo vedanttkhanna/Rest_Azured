@@ -154,14 +154,35 @@ All constants are configurable and listed in each report's `assumptions` section
 │   │   └── README.md                 # deployment guide
 │   ├── tests/                        # schema, geometry and server tests
 │   └── requirements.txt
-└── contracts/
-    ├── schemas/B.schema.json         # segmentation output schema
-    └── fixtures/                     # example job, tile and real model output
+├── solar/                           # imagery/footprints, shading, layout, energy and finance
+├── backend/                         # authenticated job API and pipeline handlers
+├── infra/                           # AWS CDK, deployment and smoke-check tools
+├── web/                             # React homeowner and installer workspace
+├── contracts/
+│   ├── schemas/                     # shared A/B/C JSON Schemas
+│   ├── openapi.yaml                 # HTTP API contract
+│   └── fixtures/                    # job, imagery, segmentation and solar report
+├── docs/                            # deployment and frontend handoff
+└── amplify.yml                      # web/ build configuration for Amplify Hosting
 ```
 
 ---
 
 ## Getting started
+
+### Web workspace
+
+The solar-themed React frontend is in [`web/`](web/README.md). It includes Cognito sign-in, map-pin assessment, pipeline progress, panel and shade overlays, energy and finance reports, saved assessments, and an Installer batch/CSV workspace.
+
+```bash
+cd web
+npm ci
+npm run dev
+```
+
+Open `http://localhost:5173`. The normal launch runs each selected rooftop through the trained model and P2 solar engine locally; it needs the supplied checkpoint and combined ML/solar environment described in [`web/README.md`](web/README.md). Map pins and coordinates work across the configured Delhi/NCR area. Address lookup needs AWS credentials. `npm run dev:demo` opens the fixed sample demo; `npm run dev:live` uses Cognito and the deployed AWS API configured from [`docs/HANDOFF_P4.md`](docs/HANDOFF_P4.md). See the web guide for checks and P3’s Amplify handoff.
+
+### ML tools
 
 **Requirements:** Python 3.12 and [uv](https://docs.astral.sh/uv/). A GPU is optional; training ran on an Apple-silicon Mac (MPS).
 
