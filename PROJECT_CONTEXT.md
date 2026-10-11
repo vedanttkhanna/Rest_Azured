@@ -11,7 +11,7 @@ SolarRooftop AI lets homeowners and solar installers in **Delhi** assess rooftop
 
 - Contains planning docs (four role briefs `P1_ML_Segmentation.md`, `P2_Solar_Geospatial.md`, `P3_Backend_Cloud.md`, `P4_Frontend_Product.md`), these context files, and ML scripts in `ml/` (data conversion, Delhi tile download, training, inference).
 - `contracts/` has schemas A (P3), B (P1), C (P2), real A/B/C fixtures, and `openapi.yaml` (P3). P1 code in `ml/`, P2 in `solar/`, P3 in `infra/` + `backend/`.
-- **Git:** remote `origin` = https://github.com/vedanttkhanna/Rest_Azured. Shared branch `p1` (P1 + P2); P3 developed on `p3` and merged `origin/p1` into it on 2026-10-11 (see Branch workflow).
+- **Git:** remote `origin` = https://github.com/vedanttkhanna/Rest_Azured. `main` is the combined integration branch for existing P1/P2/P3/P4 work. P3's commits were incorporated through shared `p1`, and P4's frontend/local pipeline through `p4` (see Branch workflow).
 - Locations: P1/P2 machine `~/Desktop/SolarRooftop-AI/`; P3 machine `C:/Users/HP/Desktop/VS/AWS/Rest_Azured` (Windows 11). The P3 parent folder `C:/Users/HP/Desktop/VS/AWS/` has stale pre-Git copies of the docs — not the project.
 - P3 code: `infra/` (CDK, 3 stacks) and `backend/` (Lambdas); how to run: `infra/README.md`. **Deployed 2026-10-11** to account 336881700677 / ap-south-1 with **all three real steps** (P2 fetch/simulate Lambdas, P1 SageMaker Serverless endpoint `solarrooftop-seg`); API `https://0cw3tjdvo2.execute-api.ap-south-1.amazonaws.com`.
 - Local data lives in `data/` (git-ignored): `data/raw/RID_m1655470/RID_dataset/` (original TUM download, 1.4 GB) and `data/processed/rid_ours/{train,val,test}/{images,masks}` (converted, fold 1, 645 MB).
@@ -130,4 +130,4 @@ PM Surya Ghar subsidy amounts (₹30k/kW ≤2 kW, ₹18k 3rd kW, cap ₹78k); ca
 
 ## Branch workflow
 
-The team uses shared `p1` for combined project work. The user explicitly requested and approved publishing their P4 frontend/local integration work on `p4` on 2026-10-11; this checkout's `p4` tracks `origin/p4` at `https://github.com/vedanttkhanna/Rest_Azured.git`. Use `p4` for this P4 work. Do not rewrite history or change other branches without authorization.
+The user requested merging all existing features into `main` on 2026-10-11. This checkout's `main` tracks `origin/main` at `https://github.com/vedanttkhanna/Rest_Azured.git` and contains the published `p1`, `p2` and `p4` histories, including P3's backend/infrastructure commits. P4's feature branch remains `p4`, tracking `origin/p4`; `main` is the combined integration branch. Preserve feature branches and do not rewrite history or change other branches without authorization.
