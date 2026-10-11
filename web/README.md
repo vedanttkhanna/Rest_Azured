@@ -20,14 +20,14 @@ The prepared `ml/.venv` and checkpoint must exist. For another checkout, follow 
 
 ```bash
 uv pip install --python ml/.venv/bin/python \
-  -r ml/requirements.txt -r ml/serve/requirements-serve.txt -r solar/requirements-dev.txt
+  -r ml/requirements.txt -r ml/serve/requirements-serve.txt -r solar/requirements-dev.txt "botocore[crt]"
 ```
 
 Run that installation command from the repo root. This Mac's project-local `uv` is `data/tools/bootstrap/bin/uv`. No separate server on port 8080 is needed for the GUI: the local API loads the model itself. Local settings live in [local/config.json](local/config.json); job data, imagery, heatmaps and weather caches persist under git-ignored `data/local/`. Stop with **Ctrl+C**, which stops both GUI and API. Interrupted jobs are marked failed on the next start; completed reports remain available.
 
 Local scanning supports the existing Delhi/NCR bounds (28.4–28.9 N, 76.8–77.4 E). Enter coordinates to move the map, confirm the pin is on a roof, then select **Find my solar potential**. A location with no detected roof returns a useful failure instead of substituting sample results. Installer CSV batches use the same real pipeline and run one job at a time on this Mac.
 
-Address lookup uses the existing Amazon Location Service adapter when AWS credentials are available; credentials/Places permissions are not configured on this Mac. Without them, Address is disabled and map pins / `lat,lng` CSV rows work. Internet access is needed for imagery, footprints and uncached weather. The local API binds only to `127.0.0.1:8765` and is a personal development workspace. Production continues to enforce Cognito/Cedar in AWS.
+Address lookup uses the existing Amazon Location Service adapter when AWS credentials are available (`botocore[crt]` is needed for credentials from `aws login`; if credentials can't be loaded, the local API prints why and starts with address lookup off). Without them, Address is disabled and map pins / `lat,lng` CSV rows work. Internet access is needed for imagery, footprints and uncached weather. The local API binds only to `127.0.0.1:8765` and is a personal development workspace. Production continues to enforce Cognito/Cedar in AWS.
 
 ## Fixture demo
 

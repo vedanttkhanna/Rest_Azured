@@ -57,7 +57,7 @@ India's PM Surya Ghar scheme subsidises rooftop solar, and Delhi has millions of
 | **Amazon S3** | Satellite tiles, segmentation output, reports, shade heatmaps |
 | **Amazon DynamoDB** | Job records and status |
 | **Amazon Location Service** | Address geocoding |
-| **AWS Amplify Hosting** | Hosts the React web app |
+| **AWS Amplify Hosting** | Hosts the React web app (build config in `amplify.yml`) |
 | **Amazon CloudWatch / AWS Budgets** | Logs, metrics, cost alarms |
 | **Amazon ECR** | Stores the inference container image |
 
@@ -68,7 +68,7 @@ The pipeline stages exchange three JSON documents:
 - **B, Segmentation:** roof and obstacle polygons as WGS84 GeoJSON.
 - **C, Report:** area, panels, energy, finance, heatmap.
 
-The schema for B and real example files are in [`contracts/`](contracts/).
+JSON Schemas for A, B and C, real example files, and the HTTP API description (`openapi.yaml`) are in [`contracts/`](contracts/).
 
 ---
 
@@ -113,7 +113,7 @@ The model outputs a class mask. The post-processing step turns it into clean geo
 |---|---|
 | Inference per 512 × 512 tile (CPU) | ~0.2–0.5 s |
 | End-to-end request through the server | ~0.8 s |
-| Memory | ~1.5 GB, so SageMaker Serverless is configured at 4 GB |
+| Memory | ~1.5 GB, so SageMaker Serverless is configured at 3072 MB (the maximum for a new AWS account) |
 | Model package | `model.tar.gz`, 101.6 MB (SafeTensors weights + config) |
 
 ---
@@ -123,7 +123,7 @@ The model outputs a class mask. The post-processing step turns it into clean geo
 | Step | Method |
 |---|---|
 | **Imagery** | Esri World Imagery, zoom 19 (~0.26 m/px), upsampled 2× to match the training scale; tiles centred on the building |
-| **Heights** | Google Solar API surface model where available; otherwise a synthetic height map from Google Open Buildings 2.5D heights plus typical obstacle heights (tank ~1.4 m, stair room ~2.7 m, parapet ~1 m) |
+| **Heights** | Google Solar API surface model when an API key is configured; otherwise a synthetic height map from building footprints (known heights or floors, else 3.2 m × 4 floors; optional Open Buildings 2.5D raster) plus typical obstacle heights (tank ~1.4 m, stair room ~2.7 m, parapet ~1 m) |
 | **Sun path** | `pvlib` solar position for every hour of a typical year |
 | **Shading** | Ray-marching each roof cell toward the sun over the height map, then a shade-fraction heatmap weighted by direct irradiance |
 | **Panel layout** | 540 Wp modules on the usable roof (obstacles and edge setbacks removed). On flat roofs: south-facing, ~25° tilt, with row pitch computed from the winter-solstice sun angle to avoid self-shading |
@@ -163,75 +163,175 @@ All constants are configurable and listed in each report's `assumptions` section
 │   ├── openapi.yaml                 # HTTP API contract
 │   └── fixtures/                    # job, imagery, segmentation and solar report
 ├── docs/                            # deployment and frontend handoff
-└── amplify.yml                      # web/ build configuration for Amplify Hosting
+├── amplify.yml                      # web/ build configuration for Amplify Hosting
+└── data/                            # (git-ignored) model weights, downloads, local results
 ```
 
 ---
 
-## Getting started
+## Run it locally
 
-### Web workspace
+There are three ways to run the web app on your computer. Pick one; all of them open at **http://localhost:5173**.
 
-The solar-themed React frontend is in [`web/`](web/README.md). It includes Cognito sign-in, map-pin assessment, pipeline progress, panel and shade overlays, energy and finance reports, saved assessments, and an Installer batch/CSV workspace.
+| Mode | What runs where | You need | Command (in `web/`) |
+|---|---|---|---|
+| **A. Demo** | Everything in the browser; every result is the bundled Mayur Vihar sample | Node.js | `npm run dev:demo` |
+| **B. Live** | Web app on your computer; sign-in, pipeline and model run on the team's **deployed AWS backend** | Node.js | `npm run dev:live` |
+| **C. Fully local** | Web app + a local job server that runs the real ML model (P1) and solar engine (P2) on your computer; no AWS account needed | Node.js, Python 3.12, `uv`, the model file, internet | `npm run dev` |
+
+Run only one mode at a time (they share port 5173). Stop any of them with **Ctrl+C**.
+
+### 0. Prerequisites (once)
+
+- **Git** and **Node.js 22.12+** (Node 24 LTS recommended; check with `node --version`).
+- For mode C and the tests: **Python 3.12** is installed automatically by **[uv](https://docs.astral.sh/uv/getting-started/installation/)**; install `uv` first.
+- **Windows:** run every command below in **Git Bash** (comes with Git for Windows). Python environments on Windows use
+  `Scripts/python.exe`; on macOS/Linux replace it with `bin/python` in the commands below.
 
 ```bash
-cd web
-npm ci
-npm run dev
+git clone https://github.com/vedanttkhanna/Rest_Azured.git
+cd Rest_Azured
+cd web && npm ci && cd ..          # installs the web app's packages (~2-3 min)
 ```
 
-Open `http://localhost:5173`. The normal launch runs each selected rooftop through the trained model and P2 solar engine locally; it needs the supplied checkpoint and combined ML/solar environment described in [`web/README.md`](web/README.md). Map pins and coordinates work across the configured Delhi/NCR area. Address lookup needs AWS credentials. `npm run dev:demo` opens the fixed sample demo; `npm run dev:live` uses Cognito and the deployed AWS API configured from [`docs/HANDOFF_P4.md`](docs/HANDOFF_P4.md). See the web guide for checks and P3’s Amplify handoff.
-
-### ML tools
-
-**Requirements:** Python 3.12 and [uv](https://docs.astral.sh/uv/). A GPU is optional; training ran on an Apple-silicon Mac (MPS).
-
+Create the web app's settings files (not secrets: the deployed backend's public connection values, also listed in
+[`docs/HANDOFF_P4.md`](docs/HANDOFF_P4.md)). `.env.production` is used by live mode, `.env.development` by demo mode
+(same values, with the mock switch on). Both are git-ignored.
 ```bash
-uv venv ml/.venv --python 3.12 && uv pip install --python ml/.venv/bin/python -r ml/requirements.txt
+cat > web/.env.production <<'EOF'
+VITE_API_URL=https://0cw3tjdvo2.execute-api.ap-south-1.amazonaws.com
+VITE_USER_POOL_ID=ap-south-1_TDZMa24oN
+VITE_USER_POOL_CLIENT_ID=3l16lr73pip6o9sbbnk258vbb7
+VITE_REGION=ap-south-1
+VITE_USE_MOCKS=false
+EOF
+sed 's/^VITE_USE_MOCKS=.*/VITE_USE_MOCKS=true/' web/.env.production > web/.env.development
 ```
 
-### Get the trained model
-The weights (`model.tar.gz`, 101.6 MB) are distributed separately from the repository. Place the file in `data/models/package/`, then verify and unpack it:
+### A. Demo mode (quickest look at the UI)
+
 ```bash
-shasum -a 256 data/models/package/model.tar.gz   # c345069342ba4ba71ecd074786e8c2e7a4d22004d106b192840f18b895f3a1ea
+cd web && npm run dev:demo
 ```
+Open http://localhost:5173. Use the **Demo role** selector to switch between Homeowner and Installer. No real assessment
+is run: every job returns the sample report.
+
+### B. Live mode (real results from the deployed AWS backend)
+
+1. Make sure `web/.env.production` exists (step 0). Start the app:
+   ```bash
+   cd web && npm run dev:live
+   ```
+2. Open **http://localhost:5173**. Type exactly this address: Vite prints `http://127.0.0.1:5173`, but the backend only
+   accepts requests from `localhost`; with `127.0.0.1` every request fails with "Failed to fetch".
+3. **Create Account** with your e-mail, enter the 6-digit code you receive, and you're signed in as a **Homeowner**.
+4. **Check a rooftop**: drag the pin onto a roof inside Delhi/NCR (or type latitude/longitude, or switch to address
+   search), tick "I've checked the pin…", then **Find my solar potential**. A report normally takes 20–45 s; the first
+   job after the system has been idle can take ~2 minutes (cold start).
+5. **Installer features** (batch CSV, export) need an Installer account: ask the backend owner (P3) to promote your
+   e-mail, then sign out and back in. Example CSV:
+   ```
+   address,lat,lng
+   Lajpat roof,28.567755949588854,77.24373752699445
+   Dwarka roof,28.58111902454872,77.05083905954604
+   ```
+
+Live mode works only while the team's AWS deployment is running. To deploy your own backend, see
+[`infra/README.md`](infra/README.md).
+
+### C. Fully local mode (real model + solar engine on your computer)
+
+1. **Get the trained model.** The weights (`model.tar.gz`, 101.6 MB) are not stored in Git; get the file from the team.
+   Put it in `data/models/package/`, check it, and unpack it where the local server expects it:
+   ```bash
+   mkdir -p data/models/package data/models/segformer_b2_delhi_fp/best
+   # copy model.tar.gz into data/models/package/ first
+   sha256sum data/models/package/model.tar.gz   # macOS: shasum -a 256 ...
+   # expected: c345069342ba4ba71ecd074786e8c2e7a4d22004d106b192840f18b895f3a1ea
+   tar -xzf data/models/package/model.tar.gz -C data/models/segformer_b2_delhi_fp/best
+   ```
+2. **Create the Python environment** (ML + solar packages, CPU-only PyTorch; ~5–10 min, ~2 GB):
+   ```bash
+   uv venv ml/.venv --python 3.12
+   uv pip install --python ml/.venv/Scripts/python.exe \
+     --index-strategy unsafe-best-match --extra-index-url https://download.pytorch.org/whl/cpu \
+     -r ml/requirements.txt -r ml/serve/requirements-serve.txt -r solar/requirements-dev.txt "botocore[crt]"
+   ```
+3. **Start everything:**
+   ```bash
+   cd web && npm run dev
+   ```
+   Wait for `Real local rooftop API ready at http://127.0.0.1:8765` (the model loads in 20–60 s), then open
+   **http://localhost:5173**. Use the role selector at the top for Homeowner/Installer. Each assessment downloads a
+   satellite tile and building outlines and fetches PVGIS weather, so internet access is needed. Results are kept in
+   `data/local/`. Address search works only if you have AWS credentials configured; otherwise use the map pin or
+   coordinates.
+
+### Run the tests
+
 ```bash
-mkdir -p data/models/delhi && tar -xzf data/models/package/model.tar.gz -C data/models/delhi
+# web app
+cd web && npm test && npm run build && cd ..
+# P1 model + local job server (needs the environment and model from mode C)
+ml/.venv/Scripts/python.exe -m pytest ml/tests web/local/test_server.py -q
+# P2 solar engine (separate environment)
+uv venv solar/.venv312 --python 3.12 && uv pip install --python solar/.venv312/Scripts/python.exe -r solar/requirements.lock.txt pytest
+solar/.venv312/Scripts/python.exe -m pytest solar/tests -q
+# P3 backend, Cedar policies, AWS infrastructure (no AWS account needed; uses fakes)
+uv venv .venv --python 3.12 && uv pip install --python .venv/Scripts/python.exe -r infra/requirements-dev.txt
+.venv/Scripts/python.exe -m pytest backend/tests infra/tests contracts/tests -q
+```
+The infrastructure tests also need `uv` on your PATH and take a few minutes. Browser tests: see [`web/README.md`](web/README.md).
+
+### Troubleshooting
+
+| Symptom | Cause / fix |
+|---|---|
+| "Failed to fetch" in live mode | You opened `127.0.0.1:5173`; open `http://localhost:5173` |
+| `Port 5173 is used by another server` | Another mode is still running; stop it with Ctrl+C |
+| `Set up the ML/solar environment first` (mode C) | Step C.2 not done, or the environment is somewhere else |
+| `The local model API did not start` (mode C) | Model not unpacked to `data/models/segformer_b2_delhi_fp/best/` (step C.1) |
+| "No roof found at this location" | The pin is on a road/park; move it onto the centre of a rooftop |
+| Address option disabled (mode C) | No AWS credentials; use the pin or coordinates |
+
+---
+
+## Developer tools
+
+### ML tools only
+
+```bash
+uv venv ml/.venv --python 3.12 && uv pip install --python ml/.venv/Scripts/python.exe -r ml/requirements.txt
 ```
 
-### Analyse a rooftop
+Analyse one rooftop from the command line (model unpacked as in mode C):
 ```bash
-ml/.venv/bin/python ml/data/download_delhi_tiles.py --out data/raw/jobs --center 28.6039825 77.2935395 --name demo
-```
-```bash
-ml/.venv/bin/python ml/serve/segment.py --model data/models/delhi --image data/raw/jobs/demo.png --lat 28.6039825 --lng 77.2935395 --out demo_seg_B.json
+ml/.venv/Scripts/python.exe ml/data/download_delhi_tiles.py --out data/raw/jobs --center 28.6039825 77.2935395 --name demo
+ml/.venv/Scripts/python.exe ml/serve/segment.py --model data/models/segformer_b2_delhi_fp/best \
+  --image data/raw/jobs/demo.png --lat 28.6039825 --lng 77.2935395 --out demo_seg_B.json
 ```
 Pass `--footprint <polygon.geojson>` for the building outline. Without it, the roof is capped to 12 m around the point and a warning is returned.
 
-### Run the inference server locally
+Run the inference server (same HTTP contract as the SageMaker container):
 ```bash
-MODEL_DIR=data/models/delhi ml/.venv/bin/python ml/serve/serve.py serve
-```
-```bash
-ml/.venv/bin/python ml/serve/invoke.py --url http://localhost:8080
+MODEL_DIR=data/models/segformer_b2_delhi_fp/best ml/.venv/Scripts/python.exe ml/serve/serve.py serve
+ml/.venv/Scripts/python.exe ml/serve/invoke.py --url http://localhost:8080      # in a second terminal
 ```
 
-### Tests
-```bash
-ml/.venv/bin/python -m pytest ml/tests -q
-```
+### Deploy the AWS backend
 
-### Deploy to Amazon SageMaker
-Build the container, push it to Amazon ECR, upload `model.tar.gz` to S3, and create a Serverless endpoint (4096 MB, max concurrency 2). Step-by-step commands are in [`ml/serve/README.md`](ml/serve/README.md).
+The whole backend (Cognito, API, Step Functions, Lambdas, SageMaker Serverless endpoint, S3, DynamoDB, alerts,
+budget) is one AWS CDK app. Requirements, deploy, health check and teardown: [`infra/README.md`](infra/README.md).
+Model container details: [`ml/serve/README.md`](ml/serve/README.md).
 
 ### Train from scratch
 1. Download RID from [mediaTUM](https://doi.org/10.14459/2022mp1655470) and convert it:
    ```bash
-   ml/.venv/bin/python ml/data/rid_to_ours.py --rid-data <RID_dataset> --out data/processed/rid_ours
+   ml/.venv/Scripts/python.exe ml/data/rid_to_ours.py --rid-data <RID_dataset> --out data/processed/rid_ours
    ```
 2. Stage 1:
    ```bash
-   ml/.venv/bin/python ml/train/train.py --epochs 15 --out data/models/segformer_b2_rid
+   ml/.venv/Scripts/python.exe ml/train/train.py --epochs 15 --out data/models/segformer_b2_rid
    ```
 3. Download Delhi tiles with `download_delhi_tiles.py` and predict on them with `predict.py`.
 4. Build the footprint labels with `footprint_labels.py`.
@@ -249,10 +349,12 @@ Each script documents its full options in its docstring.
   "job_id": "uuid",
   "lat": 28.6039825, "lng": 77.2935395,
   "image_bounds": [77.2931962, 28.603681, 77.2938828, 28.6042839],
-  "image_s3_uri": "s3://<bucket>/jobs/<job_id>/rgb.png",
+  "image_s3_uri": "s3://<bucket>/jobs/<job_id>/rgb.tif",
   "footprint": { "type": "Polygon", "coordinates": [[...]] }
 }
 ```
+This is the model endpoint used inside the pipeline. The public HTTP API for the web app (`POST /jobs`, `GET /jobs/{id}`, `GET /jobs`, `POST /jobs/batch`, Cognito JWT) is described in [`contracts/openapi.yaml`](contracts/openapi.yaml).
+
 The response is a GeoJSON `FeatureCollection` with the roof (`kind: "roof"`) and its obstacles (`kind: "obstacle"`, `class`, `roof_id`, `confidence`). See [`contracts/fixtures/seg_B.json`](contracts/fixtures/seg_B.json).
 
 ---

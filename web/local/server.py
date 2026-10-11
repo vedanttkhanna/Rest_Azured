@@ -256,22 +256,38 @@ def make_handler(jobs):
     return Handler
 
 
+def make_geocoder(session):
+    """Address lookup through P3's Amazon Location adapter, or None when AWS credentials are unusable.
+
+    Loading credentials can raise (e.g. `aws login` credentials need the optional botocore[crt] package,
+    or an expired session). Address lookup is optional, so any such failure disables it instead of
+    stopping the local workspace; pins and coordinates never need AWS.
+    """
+    try:
+        credentials = session.get_credentials()
+    except Exception as exc:  # noqa: BLE001 - any credential problem only disables address lookup
+        print(f"Address lookup disabled: AWS credentials could not be loaded ({type(exc).__name__}: {exc})", flush=True)
+        return None
+    if credentials is None:
+        return None
+    from backend.api import geocode
+    geocode._client = session.client("geo-places")
+
+    def geocoder(address):
+        try:
+            return geocode.geocode(address)
+        except Exception:
+            raise ValueError("AWS address lookup failed. Use an exact map pin or coordinates.") from None
+    return geocoder
+
+
 def main():
     settings = json.loads(Path(__file__).with_name("config.json").read_text(encoding="utf-8"))
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=settings["port"])
     args = parser.parse_args()
     import boto3
-    session = boto3.Session(region_name=settings["region"])
-    geocoder = None
-    if session.get_credentials() is not None:
-        from backend.api import geocode
-        geocode._client = session.client("geo-places")
-        def geocoder(address):
-            try:
-                return geocode.geocode(address)
-            except Exception:
-                raise ValueError("AWS address lookup failed. Use an exact map pin or coordinates.") from None
+    geocoder = make_geocoder(boto3.Session(region_name=settings["region"]))
     pipeline = Pipeline(settings)
     jobs = Jobs(pipeline, settings, geocoder)
     server = ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(jobs))

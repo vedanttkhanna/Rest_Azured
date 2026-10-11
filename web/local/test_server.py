@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 import requests
 
-from web.local.server import Jobs, make_handler
+from web.local.server import Jobs, make_geocoder, make_handler
 from solar.config import load_config
 from solar.storage import Store
 
@@ -126,3 +126,35 @@ def test_http_batch_validation_roles_assets_and_untrusted_origin(jobs):
         server.shutdown()
         server.server_close()
         worker.join()
+
+
+class SessionDouble:
+    def __init__(self, credentials=None, error=None):
+        self.credentials, self.error, self.clients = credentials, error, []
+
+    def get_credentials(self):
+        if self.error:
+            raise self.error
+        return self.credentials
+
+    def client(self, name):
+        self.clients.append(name)
+        return object()
+
+
+def test_unusable_aws_credentials_disable_address_lookup_instead_of_crashing(capsys):
+    # e.g. `aws login` credentials without botocore[crt], or an expired session
+    session = SessionDouble(error=RuntimeError("login credential provider requires botocore[crt]"))
+    assert make_geocoder(session) is None
+    assert "Address lookup disabled" in capsys.readouterr().out
+    assert session.clients == []
+
+
+def test_no_aws_credentials_means_no_address_lookup():
+    assert make_geocoder(SessionDouble(credentials=None)) is None
+
+
+def test_aws_credentials_enable_places_geocoder():
+    session = SessionDouble(credentials=object())
+    assert callable(make_geocoder(session))
+    assert session.clients == ["geo-places"]
