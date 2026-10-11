@@ -95,6 +95,23 @@ Implement P2 only: local solar/geospatial engine and handoff artifacts. Complete
 - **Gotcha found:** Windows Python defaults to cp1252 for `read_text()` — always pass `encoding="utf-8"` (schemas contain non-ASCII).
 - **Next step:** Next steps #1 (user login → bootstrap → deploy stubs → smoke test).
 
+### 2026-10-11 — Claude Code — merged origin/p1 (P2 solar engine) with README commit
+- Push of README commit `0d4e040` was rejected: origin/p1 had 2 new commits by NotCapt (`c7110b0` P2 solar engine, `0679b08` branch workflow note). Merged with `git merge origin/p1` (no rebase/force-push).
+- **Conflict:** `TASKS.md` handoff log only. Resolved by keeping all entries from both sides. `PROJECT_CONTEXT.md`, `solar/`, contract C files merged automatically.
+- **Tests:** not run after the merge.
+- **Next step:** update README's repository-structure / getting-started sections to include `solar/` (P2 owner should confirm commands).
+
+### 2026-10-11 — Claude Code — README rewritten for hackathon submission
+- **Files changed:** `README.md` (rewritten at user's request: submission style; no team roles, branches or status notes; full AWS architecture, model, solar method, API, setup, limitations, licences). `TASKS.md`.
+- **Note:** the AWS architecture and solar-simulation sections describe the system design from the briefs. At the time of writing, this checkout only had `ml/` and `contracts/`; the P2 solar engine (`solar/`) arrived on origin/p1 in parallel (see Codex entries below) and is not yet reflected in the README's repository-structure section. Backend/infra and web app are not in the repo, and nothing is deployed.
+- **Next step:** user reviews, then commits `README.md` + `TASKS.md` and pushes.
+
+### 2026-10-11 — Claude Code — project README
+- **Files created:** `README.md` (overview, status, architecture, P1 results/limitations, ML quick start, data sources/licences, team, agent files).
+- **Verified:** README quick-start commands run as written: checksum `c345069342ba…` matches, unpack to `data/models/delhi`, `download_delhi_tiles.py --center … --name demo`, `segment.py` → 3 features (+ expected no-footprint warning), `pytest ml/tests` → 13 passed. The `serve.py`/`invoke.py` pair was verified earlier with an equivalent unpacked dir, not re-run with `data/models/delhi`.
+- **Not committed:** user commits/pushes.
+- **Next step:** user commits `README.md` + `TASKS.md` to `p1` and pushes.
+
 ### 2026-10-11 ? Codex ? consolidate progress onto p1
 - **Authorization/decision:** user explicitly requested pushing P2 progress onto existing `p1`; continue using that shared branch.
 - **Files changed:** `PROJECT_CONTEXT.md` (branch preference), `TASKS.md` (handoff). Application code unchanged.
