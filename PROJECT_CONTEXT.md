@@ -130,4 +130,4 @@ PM Surya Ghar subsidy amounts (₹30k/kW ≤2 kW, ₹18k 3rd kW, cap ₹78k); ca
 
 ## Branch workflow
 
-The team uses shared `p1` for combined project work. The user explicitly requested publishing their P4 frontend/local integration work on `p4` on 2026-10-11; use `p4` for this P4 publication. Do not rewrite history or change other branches without authorization.
+The team uses shared `p1` for combined project work. The user explicitly requested and approved publishing their P4 frontend/local integration work on `p4` on 2026-10-11; this checkout's `p4` tracks `origin/p4` at `https://github.com/vedanttkhanna/Rest_Azured.git`. Use `p4` for this P4 work. Do not rewrite history or change other branches without authorization.

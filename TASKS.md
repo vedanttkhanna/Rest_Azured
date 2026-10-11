@@ -4,7 +4,7 @@ Temporary progress only. Durable facts go to `PROJECT_CONTEXT.md`. Newest handof
 
 ## Current objective
 
-Current task: publish the user's already-committed P4 frontend/local pipeline work on branch `p4`. The source branch is ready; two handoff docs are staged. The push requires explicit approval of the GitHub destination, and a new handoff commit requires explicit commit authorization after automatic review blocked both actions. P4 GUI and real local P1/P2 pipeline are verified at multiple rooftops. The newly requested panel arrangement controls, elevation/direction explanation and AWS address lookup remain outstanding; the interrupted feature turn only read context and made no implementation changes. AWS deployment remains P3-owned.
+P4 frontend/local pipeline work is published to `origin/p4` in `https://github.com/vedanttkhanna/Rest_Azured.git` with the user's explicit approval. P4 GUI and real local P1/P2 pipeline are verified at multiple rooftops. The newly requested panel arrangement controls, elevation/direction explanation and AWS address lookup remain outstanding; the interrupted feature turn only read context and made no implementation changes. AWS deployment remains P3-owned.
 
 ## Status
 
@@ -18,7 +18,7 @@ Current task: publish the user's already-committed P4 frontend/local pipeline wo
 - [x] P3 M0/M1/M2 **code** (branch `p3`): `contracts/schemas/A.schema.json`, `contracts/openapi.yaml`, DRAFT `contracts/fixtures/report_C.json` + `shade.png`; CDK app `infra/` (SolarCore / SolarPipeline / SolarApi), backend Lambdas `backend/` (api with Cedar + quota + bbox + batch, SageMaker invoker, save_result, post-confirmation, stubs), Cedar policies, scripts (deploy/smoke/teardown/export_env/make_installer/set_google_key), CI workflow. 74 tests pass. **Nothing deployed to AWS yet.**
 
 ### In progress
-- [ ] Publish local `p4` to the configured GitHub repository after the user explicitly approves that destination; automatic review rejected the first push attempt before execution.
+- [x] Publish local `p4` to the explicitly approved GitHub repository; normal push succeeded and remote/local commit IDs matched. `p4` now tracks `origin/p4`.
 - [ ] New P4 feature follow-up: review/correct roof boundary, compare panel arrangements, explain tilt/direction/heights in reports, and complete credentialed AWS address lookup. Not implemented or tested yet.
 - [ ] P4 live integration check with an existing Cognito account; P3 enables an Installer test account and configures the deployed Amplify origin in API/S3 CORS before hosting.
 - [x] P2 local fetch/simulate implementation, report C schema/fixture, heatmap, container recipe, CLI and documentation.
@@ -72,6 +72,14 @@ Current task: publish the user's already-committed P4 frontend/local pipeline wo
 ---
 
 ## Handoff log
+
+### 2026-10-11 — Codex — P4 branch published after explicit approval
+- **Authorization/decisions:** user explicitly approved committing the two staged handoff docs and pushing `p4`, including frontend commit `af3b770`, to `https://github.com/vedanttkhanna/Rest_Azured`. Performed a normal push; no force push, history rewrite, other branch modification or AWS deployment.
+- **Exact files changed:** `PROJECT_CONTEXT.md` (approved P4 branch and remote tracking), `TASKS.md` (publication completion, verified results and pending feature work). Application source unchanged in this publication turn; the existing `af3b770` frontend/local pipeline commit is included.
+- **Commands/results:** `git status --short --branch`, `git diff --cached -- PROJECT_CONTEXT.md TASKS.md` and context reads confirmed only the two handoff docs staged. `git commit -m "docs: prepare P4 branch publication handoff"` -> **46078fe**, two files changed. `GIT_TERMINAL_PROMPT=0 git push -u origin p4` -> **exit 0**, new remote `p4` created and upstream set to `origin/p4`. `git status --short --branch` -> clean `p4...origin/p4`. `git rev-parse HEAD origin/p4` and `git ls-remote --heads origin p4` -> all **46078fe1f6c326f3b551c8831b7198b3dae57d7e**. This entry records that verified publication; the handoff result update is a subsequent documentation-only commit.
+- **Validation:** local/remote equality and clean working tree verified after the first successful push. Application tests not rerun for this Git/documentation-only action; prior actual test results remain below. Model weights, archives, datasets, environments and dependencies remain git-ignored and were not published.
+- **Unresolved:** none for the first publication. Panel arrangement/boundary review, elevation/direction explanation and credentialed AWS address lookup remain not implemented or tested; authenticated AWS frontend integration remains unverified. No claim that these features are included in the published source commit.
+- **Single next actionable step:** inspect the requested roof boundary and current panel packing before implementing the P4 layout comparison controls.
 
 ### 2026-10-11 — Codex — prepare P4 branch publication; exact destination approval required
 - **Authorization/scope:** user said "help me push to branch p4". User had already committed all prior frontend/local pipeline work as `af3b770` (`web app`); working tree was clean and local `main`, `p1` and `p4` all pointed at it. This turn switches to the explicitly requested `p4`; does not modify any other branch or rewrite history.
