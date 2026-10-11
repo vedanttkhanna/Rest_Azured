@@ -5,6 +5,8 @@ from pathlib import Path
 
 import boto3
 
+import dotenv  # noqa: F401  (loads .env: AWS_PROFILE, region)
+
 REGION = "ap-south-1"
 REPO = Path(__file__).resolve().parents[2]
 

@@ -6,4 +6,4 @@ select = ["E", "F", "W", "I", "B", "UP"]
 ignore = ["E501"]
 
 [lint.isort]
-known-first-party = ["stacks", "common", "authz", "geocode", "quota", "conftest"]
+known-first-party = ["stacks", "common", "authz", "geocode", "quota", "conftest", "dotenv", "smoke"]

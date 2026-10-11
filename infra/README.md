@@ -53,15 +53,27 @@ cd infra && PATH="$PWD/../.venv/Scripts:$PATH" cdk synth --quiet
 One-time: root MFA on, IAM Identity Center admin user → `aws configure sso --profile solar`, then
 `cdk bootstrap aws://<account-id>/ap-south-1`.
 
-```bash
-export AWS_PROFILE=solar SOLAR_ALERT_EMAILS=p1@x.com,p2@x.com,p3@x.com,p4@x.com
-infra/scripts/deploy.sh                 # all stubs; writes web/.env.production and prints the values for P4
-python infra/scripts/smoke.py           # end-to-end: auth, create, poll to done, 401/403/404/400 checks
-infra/scripts/deploy.sh -c segment=real # P1 endpoint (Docker Desktop must be running)
-infra/scripts/make_installer.sh someone@example.com
-infra/scripts/set_google_key.sh         # P2's Google key -> SSM SecureString /solarrooftop/google_api_key
-infra/scripts/teardown.sh               # after judging: destroy everything + leftovers check
+Local settings live in the git-ignored repo-root **`.env`** (loaded by every script via
+[scripts/env.sh](scripts/env.sh) / [scripts/dotenv.py](scripts/dotenv.py), which also put `aws` and `docker` on PATH):
+
 ```
+AWS_PROFILE=solar
+AWS_REGION=ap-south-1
+SOLAR_ALERT_EMAILS=a@x.com,b@y.com
+SOLAR_STEP_MODES="fetch=real segment=real simulate=real"
+```
+
+```bash
+aws login --profile solar                      # when the session has expired
+.venv/Scripts/python.exe infra/scripts/check.py  # health check: every part OK/FAIL + one real job + picture
+infra/scripts/deploy.sh                        # deploy (step modes from .env; Docker Desktop must be running)
+.venv/Scripts/python.exe infra/scripts/smoke.py  # full API test: auth, create, poll, 401/403/404/400/batch
+infra/scripts/make_installer.sh someone@example.com
+infra/scripts/set_google_key.sh                # P2's Google key -> SSM SecureString /solarrooftop/google_api_key
+infra/scripts/teardown.sh                      # after judging: destroy everything + leftovers check
+```
+
+Hand-off for the web app: [docs/HANDOFF_P4.md](../docs/HANDOFF_P4.md).
 
 Add the Amplify domain to CORS when P4 has it: `-c web_origins=http://localhost:5173,https://main.xxxx.amplifyapp.com`
 (also used for the S3 CORS rule on presigned heatmap URLs).

@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # Delete everything SolarRooftop created (run after judging). Buckets are emptied by CDK (auto_delete_objects).
 set -euo pipefail
-cd "$(dirname "$0")/.."
-export AWS_REGION=ap-south-1 AWS_DEFAULT_REGION=ap-south-1
-if [ -d ../.venv/Scripts ]; then export PATH="$PWD/../.venv/Scripts:$PATH"; else export PATH="$PWD/../.venv/bin:$PATH"; fi
+source "$(dirname "$0")/env.sh"
+cd "$SOLAR_REPO/infra"
 
 cdk destroy --all --force
 

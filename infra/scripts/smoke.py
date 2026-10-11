@@ -18,6 +18,8 @@ import urllib.request
 
 import boto3
 
+import dotenv  # noqa: F401  (loads .env: AWS_PROFILE, region)
+
 REGION = "ap-south-1"
 FIXTURE_POINT = {"lat": 28.6039825, "lng": 77.2935395}
 

@@ -66,7 +66,7 @@ uv venv .venv --python 3.12 && uv pip install --python .venv/Scripts/python.exe 
 .venv/Scripts/python.exe -m pytest backend/tests infra/tests contracts/tests -q    # 74 tests, no AWS needed (moto)
 cd infra && PATH="$PWD/../.venv/Scripts:$PATH" cdk synth --quiet                 # needs Node + `npm i -g aws-cdk`
 ```
-Deploy / smoke / teardown (P3 only, needs AWS credentials): see `infra/README.md` — **not yet run**.
+Deploy / health check / smoke / teardown (P3 only, needs AWS credentials; settings in the git-ignored root `.env`): see `infra/README.md`. Verified 2026-10-11: `infra/scripts/deploy.sh` (all real), `.venv/Scripts/python.exe infra/scripts/check.py` -> ALL GOOD, `infra/scripts/smoke.py` -> ALL PASSED.
 
 ## Constraints
 
