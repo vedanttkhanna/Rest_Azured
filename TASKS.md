@@ -4,7 +4,7 @@ Temporary progress only. Durable facts go to `PROJECT_CONTEXT.md`. Newest handof
 
 ## Current objective
 
-Turn the planning docs into a working, parallelisable repo: create `contracts/` (schemas + fixtures), then each owner scaffolds their component against the fixtures.
+Implement P2 only: local solar/geospatial engine and handoff artifacts. Complete live provider/field validation when execution access and credentials are available. P1/P3/P4 implementation is outside this task.
 
 ## Status
 
@@ -14,6 +14,11 @@ Turn the planning docs into a working, parallelisable repo: create `contracts/` 
 - [x] Shared agent context system: `AGENTS.md`, `PROJECT_CONTEXT.md`, `TASKS.md`, `CLAUDE.md`, `.agents/rules/shared-context.md`.
 
 ### In progress
+- [x] P2 local fetch/simulate implementation, report C schema/fixture, heatmap, container recipe, CLI and documentation.
+- [x] P2 Python 3.12 local tests: 57 passed; final UTF-8 fetch fix additionally verified by 14 passing fetch tests. Real PVGIS fixture simulation about 15.9 seconds with cached weather.
+- [x] P2 live Esri/Overture fetch; 20/20 PVGIS yield comparisons within ±7%; unchanged P1 model -> P2 validation produced 19 reports from 20 attempted buildings (one no-roof rejection).
+- [x] P2 Linux Python 3.12 dependency wheel availability: all 37 pinned packages installed for x86_64-manylinux_2_34.
+- [ ] P2 remaining verification: Google coverage/DSM (credentials absent), authenticated Earth Engine export, independent surveyed-building accuracy, Docker/Lambda runtime and P4 consumer integration. Linux wheel availability is not a container-runtime test.
 - [ ] P1 Stage A training on RID: **stopped at epoch 11/15** (process killed externally ~11:13, no error in log). Best checkpoint epoch 8 kept at `data/models/segformer_b2_rid/best` (val mIoU 0.608). No `last/` checkpoint. Not evaluated on the RID test split yet.
 - [x] P1 Stage B fine-tune on footprint auto-labels → `data/models/segformer_b2_delhi_fp/best` (epoch 10 of 12). **Current best model.**
 - [x] P1 item 1: post-processing → contract B (`ml/serve/segment.py`), schema `contracts/schemas/B.schema.json`, real fixtures `contracts/fixtures/{job_A.json,rgb.png,seg_B.json}`, tests `ml/tests/test_contract_b.py` (6 passing).
@@ -21,7 +26,9 @@ Turn the planning docs into a working, parallelisable repo: create `contracts/` 
 - [ ] P1 next: (3) model card + metrics slide; (4) optional quality work (obstacle recall e.g. stair rooms, tree class). Hand `ml/serve/README.md` + `model.tar.gz` to P3.
 
 ### Blockers
-- None hard. Soft: Google Solar API coverage for Delhi unknown (needs an API key, P2 day-1 task).
+- P2 Google Solar coverage/DSM needs locally configured credentials or an accessible SSM parameter; none supplied. Optional Earth Engine export needs project/service credentials.
+- Docker/Podman/Finch and WSL distributions are absent. Container smoke runner is ready; Docker installation or an existing daemon is needed. No OS runtime installation was performed.
+- Independent measured roof areas and shading observations are unavailable. Model/footprint agreement is not survey accuracy; real-building validation exposed P1 under-detection and merged roofs.
 
 ### Next steps (priority order)
 1. **`contracts/`**: JSON Schemas for A, B, C + `fixtures/job_A.json`, `seg_B.json`, `report_C.json` for one real Delhi house; a schema-validation test. *(Next actionable step.)*
@@ -48,9 +55,15 @@ Turn the planning docs into a working, parallelisable repo: create `contracts/` 
 
 ## Handoff log
 
+### 2026-10-11 — Claude Code — merged origin/p1 (P2 solar engine) with README commit
+- Push of README commit `0d4e040` was rejected: origin/p1 had 2 new commits by NotCapt (`c7110b0` P2 solar engine, `0679b08` branch workflow note). Merged with `git merge origin/p1` (no rebase/force-push).
+- **Conflict:** `TASKS.md` handoff log only. Resolved by keeping all entries from both sides. `PROJECT_CONTEXT.md`, `solar/`, contract C files merged automatically.
+- **Tests:** not run after the merge.
+- **Next step:** update README's repository-structure / getting-started sections to include `solar/` (P2 owner should confirm commands).
+
 ### 2026-10-11 — Claude Code — README rewritten for hackathon submission
 - **Files changed:** `README.md` (rewritten at user's request: submission style; no team roles, branches or status notes; full AWS architecture, model, solar method, API, setup, limitations, licences). `TASKS.md`.
-- **Note:** the AWS architecture and solar-simulation sections describe the system design from the briefs. As of this entry only `ml/` and `contracts/` are implemented; the solar engine, backend/infra and web app are not in the repo, and nothing is deployed. The team should make sure the README matches what is submitted.
+- **Note:** the AWS architecture and solar-simulation sections describe the system design from the briefs. At the time of writing, this checkout only had `ml/` and `contracts/`; the P2 solar engine (`solar/`) arrived on origin/p1 in parallel (see Codex entries below) and is not yet reflected in the README's repository-structure section. Backend/infra and web app are not in the repo, and nothing is deployed.
 - **Next step:** user reviews, then commits `README.md` + `TASKS.md` and pushes.
 
 ### 2026-10-11 — Claude Code — project README
@@ -58,6 +71,44 @@ Turn the planning docs into a working, parallelisable repo: create `contracts/` 
 - **Verified:** README quick-start commands run as written: checksum `c345069342ba…` matches, unpack to `data/models/delhi`, `download_delhi_tiles.py --center … --name demo`, `segment.py` → 3 features (+ expected no-footprint warning), `pytest ml/tests` → 13 passed. The `serve.py`/`invoke.py` pair was verified earlier with an equivalent unpacked dir, not re-run with `data/models/delhi`.
 - **Not committed:** user commits/pushes.
 - **Next step:** user commits `README.md` + `TASKS.md` to `p1` and pushes.
+### 2026-10-11 ? Codex ? consolidate progress onto p1
+- **Authorization/decision:** user explicitly requested pushing P2 progress onto existing `p1`; continue using that shared branch.
+- **Files changed:** `PROJECT_CONTEXT.md` (branch preference), `TASKS.md` (handoff). Application code unchanged.
+- **Commands/results:** fetched origin, switched to `p1`, `git merge --ff-only origin/p1` was already up to date; `git merge --ff-only p2` advanced p1 from bc5e040 to c7110b0 without conflicts. Publishing this state and workflow note with a normal push; no history rewrite or branch deletion.
+- **Tests:** not rerun for branch/documentation-only work; existing P2 validation results remain recorded below.
+- **Unresolved/next step:** remaining P2 external validation is unchanged; configure Google Solar credentials and run the coverage check.
+
+### 2026-10-11 — Codex — P2 live validation and publication handoff
+- **Files:** P2 implementation under `solar/`, C additions `contracts/schemas/C.schema.json` and `contracts/fixtures/{report_C.json,shade_C.png}`, plus `PROJECT_CONTEXT.md` and `TASKS.md`. No P1/P3/P4 code changes. Detailed file inventory is in the implementation entry below.
+- **Live fixes:** `solar/solar/providers.py` invokes Overture's real console entry point with UTF-8 (Hindi names failed under Windows cp1252), validates complete GeoJSON, and atomically replaces downloads. `solar/tests/test_fetch.py` covers interrupted/invalid output, cache preservation and Unicode. `solar/validation/validate_buildings.py` resumes completed samples and retries invalid caches with a batch-only 120-second footprint timeout; production remains 35 seconds.
+- **Live commands/results:** `solar/.venv312/Scripts/python.exe solar/run.py fetch --event solar/events/fetch_fixture.json --out data/solar/fetched_A.json` succeeded: centered 512x512 RGB, target footprint, 60 neighbors. `solar/.venv312/Scripts/python.exe solar/validation/validate_delhi.py` -> 20/20 within ±7% of PVGIS, differences +3.348% to +6.352% (mean +4.7175%), 12 distinct weather cells. Actual results are in `solar/validation/validation_delhi.csv`.
+- **Building validation:** `data/solar/validation/.venv/Scripts/python.exe solar/validation/validate_buildings.py --model data/solar/validation/model --resume` -> 19 valid reports/heatmaps from 20 attempts, 8.453–37.913 seconds per simulation (excludes model startup/initial footprint lookup). Sample 09 has no P1 roof and is correctly rejected. Raw inputs/model extraction remain ignored under data/. Summary is `solar/validation/building_validation_delhi.csv`; quality limitations and visual review of samples 04/05/09/14 are documented in `solar/validation/README.md`.
+- **Actual tests:** `solar/.venv312/Scripts/python.exe -m pytest solar/tests -q` -> 57 passed, 389 warnings, 84.03 seconds. After final UTF-8 fix, `solar/.venv312/Scripts/python.exe -m pytest solar/tests/test_fetch.py -q -p no:cacheprovider` -> 14 passed, 10 warnings, 3.46 seconds. No implementation changed since those runs; publication does not require another test run.
+- **Container:** all 37 locked dependencies installed as Linux Python 3.12 x86_64-manylinux_2_34 binary wheels via uv cross-platform install. `solar/validation/container_smoke.py` prepares buildx/RIE verification. Docker build/runtime remains **not run**; wheel installation is not runtime verification.
+- **Publication:** user explicitly authorized commit/push. Created branch `p2` from `p1` at bc5e040; current P2 source, small validation summaries and integration fixtures are prepared for publication to origin/p2. Weights, raw datasets, credentials and environments are excluded. Shared C additions still require affected-owner PR review before integration.
+- **Remaining:** Docker/RIE and deployed Lambda timing; credentialed Google coverage/DSM; optional authenticated Earth Engine export; independent survey/shading measurements; financial-default validation; P3/P4 consumer review. AWS deployment remains P3-owned.
+- **Next actionable step:** configure local Google Solar credentials or accessible SSM parameter and run `solar/.venv312/Scripts/python.exe solar/validation/check_coverage.py --limit 10`.
+
+### 2026-10-10 — Codex — P2 local implementation and verification
+- **Files created:** `solar/.gitignore`, `solar/Dockerfile`, `solar/Dockerfile.dockerignore`, `solar/README.md`, `solar/handlers.py`, `solar/run.py`, `solar/requirements.txt`, `solar/requirements-dev.txt`, `solar/requirements-earthengine.txt`, `solar/requirements.lock.txt`, `solar/solar/__init__.py`, `solar/solar/config.yaml`, `solar/solar/config.py`, `solar/solar/geo.py`, `solar/solar/heights.py`, `solar/solar/shading.py`, `solar/solar/layout.py`, `solar/solar/weather.py`, `solar/solar/energy.py`, `solar/solar/finance.py`, `solar/solar/storage.py`, `solar/solar/providers.py`, `solar/solar/fetch.py`, `solar/solar/report.py`, `solar/events/fetch_fixture.json`, `solar/events/simulate_fixture.json`, `solar/tests/conftest.py`, `solar/tests/test_physics.py`, `solar/tests/test_report.py`, `solar/tests/test_fetch.py`, `solar/tests/test_integration.py`, `solar/tests/test_contract_c.py`, `solar/docs/assumptions.md`, `solar/docs/coverage_delhi.md`, `solar/validation/README.md`, `solar/validation/locations.csv`, `solar/validation/validation_delhi.csv`, `solar/validation/validate_delhi.py`, `solar/validation/check_coverage.py`, `solar/validation/make_fixture.py`, `solar/validation/fixture_preview.png`, `contracts/schemas/C.schema.json`, `contracts/fixtures/report_C.json`, `contracts/fixtures/shade_C.png`.
+- **Files changed:** PROJECT_CONTEXT.md, TASKS.md. Shared contract C artifacts are P2-owned additions; no A/B schema or P1/P3/P4 implementation changes. Root Docker ignore remains untouched; P2 has its own build-specific filter.
+- **Decisions:** standalone Python package; config-driven constants; centered Web Mercator RGB for P1 and UTM 43N calculations with meridian convergence; deterministic neighbor/height sidecars rather than A changes; separate DSM and synthetic surfaces; representative monthly shadow geometry weighted by actual TMY beam; PVGIS irradiance offset honored; chosen layout orientation drives energy; no extra soiling deduction; no roof raises; no panels gives zero energy and nullable payback (consumer review needed). Missing neighbors/estimated heights/upstream warnings are explicit.
+- **Environment commands:** initial python -m venv solar/.venv succeeded; sandbox pip install failed with WinError 10013 network restriction. Network-enabled pip installed uv in that environment; uv venv solar/.venv312 --python 3.12 installed Python 3.12.15 under ignored data/python. uv pip install --python solar/.venv312/Scripts/python.exe -r solar/requirements-dev.txt succeeded; uv --cache-dir data/uv-cache pip freeze generated the lock.
+- **Verification commands/results:** solar/.venv312/Scripts/python.exe -m pytest solar/tests -q --disable-warnings -> **52 passed, 388 dependency/API deprecation warnings in 63.85 s**. Early tests caught tuple-vs-array GeoJSON serialization and artificial dawn shading on a flat DSM; both corrected. Physics tests include analytical cube shadow length/direction/no-wrap, spacing/packing, beam-only shading, subsidy tiers, zero/no-roof behavior, DSM nodata, Open Buildings raster, provider errors and S3 scoping.
+- **Live weather:** solar/.venv312/Scripts/python.exe solar/run.py weather --lat 28.6039825 --lng 77.2935395 --out data/solar/weather_fixture.csv succeeded (8760 samples; PVGIS-ERA5 cache point 28.60,77.30; years 2005–2023). solar/run.py simulate --event solar/events/simulate_fixture.json --out data/solar/fixture_report.json succeeded. solar/validation/make_fixture.py regenerated C/heatmap/preview from cached real weather in **15.917 s**: 30 panels, 16.2 kW, 27273.75 kWh/year, 1683.56 kWh/kWp, 0.376% local shade loss. These are modeled outputs, not measured building accuracy. Neighbor data absent in fixture.
+- **Visual QA:** viewed solar/validation/fixture_preview.png; panels align with target roof, spacing is visible, detected obstacles are excluded. Known upstream missed rooftop structures remain an assessment limitation. P4 rendering itself not verified.
+- **Not run/blockers:** automatic approval review prevented the live Esri/Overture fetch command from executing because the review service hit a usage limit (not an unsafe-action finding). The subsequent 20-location PVGIS benchmark was not launched. CSV rows explicitly say not_run. Google credentials were requested but not supplied; coverage not tested. Earth Engine authentication/export not tested. Docker executable absent; Docker build, Lambda and AWS deployment not run. No P1 model loading or modification. Financial default capex/tariff/CO2 remain illustrative/unverified; central subsidy schedule checked against official sources in assumptions doc.
+- **Single next actionable step:** once network execution is available, run `solar/.venv312/Scripts/python.exe solar/run.py fetch --event solar/events/fetch_fixture.json --out data/solar/fetched_A.json` to verify the fallback fetch on real providers.
+
+### 2026-10-10 — Codex — overview and P2 readiness audit
+- **Files changed:** PROJECT_CONTEXT.md (stale status corrections and integration constraints), TASKS.md (this entry). No implementation or contracts changed.
+- **Checkout:** D:/rest_azured/Rest_Azured, p1 tracking origin/p1, initially clean. No solar/, backend/, infra/, web/ implementation.
+- **Weights:** root model.tar.gz, 101,587,119 bytes, readable archive containing config.json, model.safetensors, metrics.json. SHA-256 c345069342ba4ba71ecd074786e8c2e7a4d22004d106b192840f18b895f3a1ea matches historical handoff prefix. No extraction or model loading performed.
+- **Commands:** git status --short --branch (ownership failure); git -c safe.directory=D:/rest_azured/Rest_Azured status --short --branch (passed, process-local exception); python --version (3.10.9); Python tarfile/hashlib/importlib inspection and JSON Schema checks; python -m pytest ml/tests -q.
+- **Results:** B schema and fixture validate, A/B job IDs match. Pytest could not start: No module named pytest. Shapely, pyproj, rasterio, pvlib also absent. Historical 13 passing tests are from P1 Mac, not this checkout. No Docker, AWS, inference or external API verification.
+- **P2 sequence:** Python 3.12 environment; C schema/fixture per agreed contract; fixture-driven energy/finance; imagery/footprint/neighbor fetch; heights/shading/layout/heatmap; Lambda packaging; real-address validation. Google coverage check remains pending credentials; fallback work can proceed.
+- **Open issues:** normalize imagery for P1; obtain neighbors independently of B; retain warnings; avoid double-counting soiling; keep layout and modeled orientation consistent; distinguish solar/civil time; define empty-roof and zero-panel behavior; verify financial defaults.
+- **Single next actionable step:** create an isolated Python 3.12 environment and install P2 geospatial, solar and test dependencies.
 
 ### 2026-10-10 — Claude Code — Git setup (user-driven)
 - User ran `git init`, `git remote add origin https://github.com/vedanttkhanna/Rest_Azured`, `git checkout -b p1` (remote was empty, so no `origin/main`), and staged the project files.

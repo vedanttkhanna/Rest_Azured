@@ -1,0 +1,79 @@
+geo:
+  metric_crs: EPSG:32643
+  timezone: Asia/Kolkata
+  delhi_bounds: [76.8, 28.4, 77.4, 28.9]
+  grid_resolution_m: 0.25
+  window_m: 120.0
+  max_grid_cells: 1000000
+heights:
+  floor_height_m: 3.2
+  default_floors: 4
+  panel_mount_height_m: 0.2
+  obstacle_m:
+    water_tank: 1.4
+    stair_room: 2.7
+    ac_unit: 0.8
+    solar_heater: 1.5
+    existing_pv: 1.2
+    parapet: 1.0
+    tree: 3.0
+    other: 1.0
+shading:
+  max_distance_m: 60.0
+  min_elevation_deg: 3.0
+  representative_day: 15
+  max_annual_fraction: 0.20
+layout:
+  edge_setback_m: 0.6
+  obstacle_buffer_m: 0.5
+  panel_length_m: 2.278
+  panel_width_m: 1.134
+  panel_wp: 540
+  tilt_deg: 25.0
+  azimuth_deg: 180.0
+  panel_gap_m: 0.02
+  packing_offsets: 4
+  winter_month: 12
+  winter_day: 21
+  solar_hours: [9.0, 15.0]
+  spacing_step_minutes: 15
+energy:
+  year: 2023
+  albedo: 0.2
+  gamma_pdc: -0.0035
+  total_system_loss_pct: 14.0
+  soiling_loss_pct: 5.0
+  inverter_efficiency: 0.96
+  dc_ac_ratio: 1.0
+  sapm_a: -3.56
+  sapm_b: -0.075
+  sapm_delta_t: 3.0
+weather:
+  api_url: https://re.jrc.ec.europa.eu/api/v5_3/
+  grid_degrees: 0.05
+  timeout_s: 30
+  use_horizon: true
+finance:
+  capex_inr_per_kw: 57500.0
+  tariff_inr_per_kwh: 7.0
+  subsidy_eligible: true
+  subsidy_first_kw: 2.0
+  subsidy_first_rate: 30000.0
+  subsidy_next_kw: 1.0
+  subsidy_next_rate: 18000.0
+  subsidy_cap_inr: 78000.0
+  degradation_per_year: 0.005
+  lifetime_years: 25
+  grid_co2_t_per_mwh: 0.71
+fetch:
+  timeout_s: 20
+  imagery_size_px: 512
+  esri_zoom: 19
+  esri_scale: 2
+  esri_url: https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}
+  google_quality: BASE
+  google_pixel_size_m: 0.25
+  google_radius_m: 150
+  footprint_timeout_s: 35
+  footprint_nearest_m: 5.0
+  open_buildings_year: 2023
