@@ -4,7 +4,7 @@ Temporary progress only. Durable facts go to `PROJECT_CONTEXT.md`. Newest handof
 
 ## Current objective
 
-P4 GUI and real local P1/P2 pipeline are connected and verified at multiple Delhi rooftops. Normal `npm run dev` uses the supplied model, fresh imagery and solar simulation; fixture mode is explicit `dev:demo`. Authenticated AWS frontend integration remains pending a team Cognito account; AWS deployment remains P3-owned.
+Current task: publish the user's already-committed P4 frontend/local pipeline work on branch `p4`. The source branch is ready; two handoff docs are staged. The push requires explicit approval of the GitHub destination, and a new handoff commit requires explicit commit authorization after automatic review blocked both actions. P4 GUI and real local P1/P2 pipeline are verified at multiple rooftops. The newly requested panel arrangement controls, elevation/direction explanation and AWS address lookup remain outstanding; the interrupted feature turn only read context and made no implementation changes. AWS deployment remains P3-owned.
 
 ## Status
 
@@ -18,6 +18,8 @@ P4 GUI and real local P1/P2 pipeline are connected and verified at multiple Delh
 - [x] P3 M0/M1/M2 **code** (branch `p3`): `contracts/schemas/A.schema.json`, `contracts/openapi.yaml`, DRAFT `contracts/fixtures/report_C.json` + `shade.png`; CDK app `infra/` (SolarCore / SolarPipeline / SolarApi), backend Lambdas `backend/` (api with Cedar + quota + bbox + batch, SageMaker invoker, save_result, post-confirmation, stubs), Cedar policies, scripts (deploy/smoke/teardown/export_env/make_installer/set_google_key), CI workflow. 74 tests pass. **Nothing deployed to AWS yet.**
 
 ### In progress
+- [ ] Publish local `p4` to the configured GitHub repository after the user explicitly approves that destination; automatic review rejected the first push attempt before execution.
+- [ ] New P4 feature follow-up: review/correct roof boundary, compare panel arrangements, explain tilt/direction/heights in reports, and complete credentialed AWS address lookup. Not implemented or tested yet.
 - [ ] P4 live integration check with an existing Cognito account; P3 enables an Installer test account and configures the deployed Amplify origin in API/S3 CORS before hosting.
 - [x] P2 local fetch/simulate implementation, report C schema/fixture, heatmap, container recipe, CLI and documentation.
 - [x] P2 Python 3.12 local tests: 57 passed; final UTF-8 fetch fix additionally verified by 14 passing fetch tests. Real PVGIS fixture simulation about 15.9 seconds with cached weather.
@@ -70,6 +72,14 @@ P4 GUI and real local P1/P2 pipeline are connected and verified at multiple Delh
 ---
 
 ## Handoff log
+
+### 2026-10-11 — Codex — prepare P4 branch publication; exact destination approval required
+- **Authorization/scope:** user said "help me push to branch p4". User had already committed all prior frontend/local pipeline work as `af3b770` (`web app`); working tree was clean and local `main`, `p1` and `p4` all pointed at it. This turn switches to the explicitly requested `p4`; does not modify any other branch or rewrite history.
+- **Exact files changed:** `PROJECT_CONTEXT.md` (explicit P4 branch preference), `TASKS.md` (publication state and outstanding feature request). Git config now has `origin=https://github.com/vedanttkhanna/Rest_Azured.git`, the repository documented in the project context. Application source unchanged; local data/weights/environments remain excluded.
+- **Commands/results:** context/source reads; `git status --short --branch` -> clean `main`; `git branch -avv`, `git remote -v` -> no remote initially; `git diff --stat` -> no changes; `.gitignore`/tracked-file inspection, `git ls-files --others --exclude-standard` -> none; `git log -5 --oneline`, `git show --stat --oneline HEAD` -> frontend commit changes 70 files; sensitive artifact path checks -> no tracked data, env, model archives, weights, dependencies or virtualenvs; git author configuration present. Read-only `git ls-remote --heads https://github.com/vedanttkhanna/Rest_Azured.git p4 p1 main` -> remote `p1=b31c9f547a795824812efeaa7ac96f94d3cb62dd`, no `p4`/`main`. `git remote add origin ...` and `git switch p4` succeeded. Attempted `GIT_TERMINAL_PROMPT=0 git push -u origin p4` was **rejected by automatic approval review before execution**; no remote branch created or code published by this turn. `git diff --check` passed; `git add PROJECT_CONTEXT.md TASKS.md` succeeded. Attempted `git commit -m "docs: prepare P4 branch publication handoff"` was also rejected before execution; the source commit remains `af3b770`, and the two handoff docs are staged for review.
+- **Review reasons:** external publication of repository code/docs requires the user to explicitly authorize this exact GitHub destination or establish ownership; the request named only the branch. The additional handoff commit was separately rejected because repo instructions require explicit current-session commit authorization and the request authorized a push without naming that new commit. No retry or alternate transport used. Pending actions are the optional handoff-doc commit and a normal, non-force push of local `p4` to `https://github.com/vedanttkhanna/Rest_Azured.git`.
+- **Validation:** sensitive tracked-file exclusion checks passed. Application tests were not rerun for branch/config/documentation-only publication; prior verified results remain above. New panel layout/elevation/address feature work was not implemented in the interrupted turn and is not part of the existing frontend commit.
+- **Single next actionable step:** obtain explicit user approval for the staged handoff commit and push of `p4` to `https://github.com/vedanttkhanna/Rest_Azured.git` (or approval to push only the existing source commit), then perform the approved actions and verify remote/local commit IDs match.
 
 ### 2026-10-11 — Codex — repeated local launch handles an already-running workspace
 - **Cause/decision:** user ran `npm run dev` while Codex's verified GUI/API were still active. The old launcher spawned a duplicate model process and tried another Vite instance. Added health/port preflight before spawning: an existing healthy GUI prints its URL and exits 0; a healthy API alone can be reused; unrelated/unavailable port occupants get actionable errors. Shutdown only kills children this invocation starts. No existing services or reports stopped/removed.
