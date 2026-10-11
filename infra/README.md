@@ -75,13 +75,27 @@ infra/scripts/teardown.sh                      # after judging: destroy everythi
 
 Hand-off for the web app: [docs/HANDOFF_P4.md](../docs/HANDOFF_P4.md).
 
-Add the Amplify domain to CORS when P4 has it: `-c web_origins=http://localhost:5173,https://main.xxxx.amplifyapp.com`
-(also used for the S3 CORS rule on presigned heatmap URLs).
+### Website hosting (Amplify)
+
+`SolarCore` creates an Amplify Hosting app `solarrooftop-web` with a `main` branch (no Git connection) and a
+single-page-app rewrite rule. Its URL is the stack output `WebUrl` (currently https://main.da6yw5ko9zhmc.amplifyapp.com) and is added
+automatically to the API and S3 CORS origins, next to `web_origins` (`http://localhost:5173,http://127.0.0.1:5173`).
+Publish the web app after the stacks are deployed, and again after every change in `web/`:
+
+```bash
+.venv/Scripts/python.exe infra/scripts/deploy_web.py   # export_env -> npm run build -> zip web/dist -> Amplify deployment
+```
+Amplify's CDN caches responses (s-maxage 1 year): after changing the Amplify rewrite rules, run `deploy_web.py`
+again (a new deployment clears the cache). `check.py` verifies the site and that `.mjs` assets are served as JavaScript.
 
 Local Lambda run with SAM CLI (Docker running), using the synthesized template instead of a separate `template.yaml`:
 `sam local invoke -t infra/cdk.out/SolarApi.template.json <ApiFn logical id> -e <event.json>`.
 
 ## Gotchas
+
+- **The SPA rewrite rule must list every static file type the build emits.** It first lacked `mjs`, so MapLibre's
+  worker (`assets/maplibre-gl-worker-*.mjs`) was answered with `index.html` and hosted maps never finished loading
+  (dev mode was unaffected). Test: `test_spa_rewrite_keeps_static_files_including_mjs_workers`.
 
 - Budgets must exclude credits (`IncludeCredit: false`) or spend shows as $0 and alerts never fire. Budget data lags up to a day.
 - `BUILDX_NO_DEFAULT_ATTESTATIONS=1` (set by `deploy.sh`): Lambda and SageMaker reject images with attestation manifests.

@@ -55,7 +55,7 @@ class ApiStack(Stack):
             api_name="solarrooftop-api",
             create_default_stage=False,
             cors_preflight=apigw.CorsPreflightOptions(
-                allow_origins=cfg.web_origins,
+                allow_origins=core.web_origins,
                 allow_methods=[apigw.CorsHttpMethod.GET, apigw.CorsHttpMethod.POST, apigw.CorsHttpMethod.OPTIONS],
                 allow_headers=["Authorization", "Content-Type"],
                 max_age=Duration.hours(1),

@@ -82,6 +82,11 @@ The data contracts (A RoofJob, B Segmentation GeoJSON, C Report) and HTTP routes
 - **New-account AWS quotas (verified 2026-10-11):** Lambda memory max 3008 MB; SageMaker serverless max 3072 MB per endpoint. SageMaker rejects OCI image manifests (Docker Desktop containerd-store default); images must be Docker v2 (`infra/scripts/prebuild_images.py`). Lambda accepts both.
 - **P2 Lambda image needs `expat`** on top of `public.ecr.aws/lambda/python:3.12` (rasterio import fails otherwise).
 - **Measured on AWS (2026-10-11):** warm job 16-22 s end to end; cold first job ~2 min (P2 container cold start dominates). Results identical to local runs for the same coordinates.
+- **Website hosting (2026-10-11):** Amplify Hosting app `solarrooftop-web` (id `da6yw5ko9zhmc`, branch `main`, no Git
+  connection) created by `SolarCore`; live at https://main.da6yw5ko9zhmc.amplifyapp.com. Published with `infra/scripts/deploy_web.py` (build + zip upload).
+  The site URL is added to API/S3 CORS automatically, plus `http://localhost:5173` and `http://127.0.0.1:5173`.
+  The SPA rewrite rule must list every static extension the build emits (`mjs` for MapLibre's worker); Amplify's CDN
+  caches responses for a year, so re-run `deploy_web.py` after rule changes to clear it.
 - **Always deploy with `SOLAR_ALERT_EMAILS` set and the same `-c fetch/segment/simulate` flags** (deploying the pipeline stack without emails removes the failure alarm).
 - **Always deploy SolarCore with `SOLAR_ALERT_EMAILS` set** — without it the budget and alert subscriptions are removed.
 - **Windows Python** defaults to cp1252 for `Path.read_text()`; our JSON schemas contain non-ASCII (—, ×). Always pass `encoding="utf-8"`.

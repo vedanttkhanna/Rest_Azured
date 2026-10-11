@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from aws_cdk import Annotations, Aws, CfnOutput, Duration, RemovalPolicy, Stack
+from aws_cdk import aws_amplify as amplify
 from aws_cdk import aws_budgets as budgets
 from aws_cdk import aws_cognito as cognito
 from aws_cdk import aws_dynamodb as ddb
@@ -16,12 +17,32 @@ from stacks.config import Config
 from stacks.packaging import python_asset
 
 GROUPS = ("Homeowner", "Installer")
+WEB_BRANCH = "main"
 BUDGET_ALERTS_USD = (25, 75, 150)  # actual spend, credits excluded
 
 
 class CoreStack(Stack):
     def __init__(self, scope: Construct, id: str, *, cfg: Config, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
+
+        # --- Website hosting (P4's web/ app). No Git connection: infra/scripts/deploy_web.py uploads web/dist.
+        self.web_app = amplify.CfnApp(
+            self, "WebApp",
+            name="solarrooftop-web",
+            platform="WEB",
+            description="SolarRooftop AI web app (manual deployments from infra/scripts/deploy_web.py)",
+            # Single-page app: any path that isn't a file is served index.html (client-side routes like /jobs/<id>).
+            # Every static type the build emits must be listed, e.g. `mjs`: MapLibre's worker is a .mjs file and
+            # without it the worker got index.html and maps never finished loading (found 2026-10-11).
+            custom_rules=[amplify.CfnApp.CustomRuleProperty(
+                source="</^[^.]+$|\\.(?!(css|gif|ico|jpg|jpeg|js|mjs|png|txt|svg|woff|woff2|ttf|map|json|webp|webmanifest|wasm|xml|csv|pdf)$)([^.]+$)/>",
+                target="/index.html", status="200")],
+        )
+        amplify.CfnBranch(self, "WebBranch", app_id=self.web_app.attr_app_id, branch_name=WEB_BRANCH,
+                          stage="PRODUCTION", enable_auto_build=False)
+        self.web_url = f"https://{WEB_BRANCH}.{self.web_app.attr_default_domain}"
+        # Browsers may call the API / download heatmaps only from these origins (local dev + hosted site).
+        self.web_origins = [*cfg.web_origins, self.web_url]
 
         self.bucket = s3.Bucket(
             self, "JobsBucket",
@@ -30,7 +51,7 @@ class CoreStack(Stack):
             encryption=s3.BucketEncryption.S3_MANAGED,
             enforce_ssl=True,
             lifecycle_rules=[s3.LifecycleRule(prefix="jobs/", expiration=Duration.days(30))],
-            cors=[s3.CorsRule(allowed_methods=[s3.HttpMethods.GET], allowed_origins=cfg.web_origins,
+            cors=[s3.CorsRule(allowed_methods=[s3.HttpMethods.GET], allowed_origins=self.web_origins,
                               allowed_headers=["*"], max_age=3600)],
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
@@ -129,3 +150,5 @@ class CoreStack(Stack):
         CfnOutput(self, "UserPoolId", value=self.user_pool.user_pool_id)
         CfnOutput(self, "UserPoolClientId", value=self.user_pool_client.user_pool_client_id)
         CfnOutput(self, "BucketName", value=self.bucket.bucket_name)
+        CfnOutput(self, "WebAppId", value=self.web_app.attr_app_id)
+        CfnOutput(self, "WebUrl", value=self.web_url)

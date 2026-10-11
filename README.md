@@ -2,6 +2,8 @@
 
 **Satellite-based rooftop solar potential evaluator for Delhi.**
 
+**Live app:** https://main.da6yw5ko9zhmc.amplifyapp.com (create an account with your e-mail; Homeowner access is automatic).
+
 SolarRooftop AI lets homeowners and solar installers assess a building's rooftop solar potential from a single address. It segments the roof from satellite imagery, detects obstructions such as water tanks, stair rooms, trees and existing panels, models shading from surrounding buildings, and estimates usable area, panel count, annual energy output (kWh) and financial payback in ₹.
 
 ---
@@ -222,8 +224,8 @@ is run: every job returns the sample report.
    ```bash
    cd web && npm run dev:live
    ```
-2. Open **http://localhost:5173**. Type exactly this address: Vite prints `http://127.0.0.1:5173`, but the backend only
-   accepts requests from `localhost`; with `127.0.0.1` every request fails with "Failed to fetch".
+2. Open **http://localhost:5173** (or `http://127.0.0.1:5173`; the backend accepts both, plus the hosted site's
+   address, and nothing else).
 3. **Create Account** with your e-mail, enter the 6-digit code you receive, and you're signed in as a **Homeowner**.
 4. **Check a rooftop**: drag the pin onto a roof inside Delhi/NCR (or type latitude/longitude, or switch to address
    search), tick "I've checked the pin…", then **Find my solar potential**. A report normally takes 20–45 s; the first
@@ -236,8 +238,8 @@ is run: every job returns the sample report.
    Dwarka roof,28.58111902454872,77.05083905954604
    ```
 
-Live mode works only while the team's AWS deployment is running. To deploy your own backend, see
-[`infra/README.md`](infra/README.md).
+Live mode uses the same backend as the hosted app (https://main.da6yw5ko9zhmc.amplifyapp.com) and works only while the team's AWS deployment is
+running. To deploy your own backend and website, see [`infra/README.md`](infra/README.md).
 
 ### C. Fully local mode (real model + solar engine on your computer)
 
@@ -287,7 +289,7 @@ The infrastructure tests also need `uv` on your PATH and take a few minutes. Bro
 
 | Symptom | Cause / fix |
 |---|---|
-| "Failed to fetch" in live mode | You opened `127.0.0.1:5173`; open `http://localhost:5173` |
+| "Failed to fetch" in live mode | The page's address isn't on the backend's allowed list (only port 5173 on localhost/127.0.0.1 and the hosted site), or the backend isn't deployed |
 | `Port 5173 is used by another server` | Another mode is still running; stop it with Ctrl+C |
 | `Set up the ML/solar environment first` (mode C) | Step C.2 not done, or the environment is somewhere else |
 | `The local model API did not start` (mode C) | Model not unpacked to `data/models/segformer_b2_delhi_fp/best/` (step C.1) |

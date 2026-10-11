@@ -47,7 +47,7 @@ class Config:
             model_version=str(ctx("model_version") or "segformer-b2-delhi-fp-v1"),
             seg_memory_mb=int(ctx("seg_memory_mb") or 3072),
             seg_max_concurrency=int(ctx("seg_max_concurrency") or 2),
-            web_origins=_list(ctx("web_origins") or "http://localhost:5173"),
+            web_origins=_list(ctx("web_origins") or "http://localhost:5173,http://127.0.0.1:5173"),
             # Team e-mails for budget + failure alerts. Kept out of git: set SOLAR_ALERT_EMAILS or -c alert_emails=a,b
             alert_emails=_list(ctx("alert_emails") or os.environ.get("SOLAR_ALERT_EMAILS", "")),
             quota_homeowner=int(ctx("quota_homeowner") or 20),

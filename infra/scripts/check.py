@@ -15,8 +15,11 @@ import io
 import json
 import math
 import os
+import re
 import sys
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 import boto3
@@ -89,7 +92,30 @@ def check_infra(session) -> dict:
                                "(excluding credits; AWS updates this ~3x/day)")
     except ClientError as e:
         line("   Budget", False, e.response["Error"]["Message"])
+    check_website(info.get("WebUrl"))
     return info
+
+
+def check_website(url: str | None) -> None:
+    """Hosted site answers, and a client-side route is served the app (SPA rewrite) while .mjs stays JavaScript."""
+    if not url:
+        line("4b. Website (Amplify)", None, "not deployed")
+        return
+    def get(path):
+        with urllib.request.urlopen(f"{url}{path}", timeout=20) as r:
+            return r.headers.get("Content-Type", ""), r.read().decode(errors="replace")
+
+    try:
+        _, html = get("/jobs/health-check")  # a client-side route: must return the app, not 404
+        chunks = re.findall(r"/assets/[\w.-]+\.js", html)
+        if not chunks:
+            line("4b. Website (Amplify)", False, f"{url}: page did not load the app")
+            return
+        workers = {w for c in chunks if "maps" in c for w in re.findall(r"assets/[\w.-]+\.mjs", get(c)[1])}
+        bad = [w for w in workers if "javascript" not in get(f"/{w}")[0]]  # e.g. rewritten to index.html
+        line("4b. Website (Amplify)", not bad, url if not bad else f"served as HTML, maps will not load: {bad}")
+    except (urllib.error.URLError, TimeoutError) as e:
+        line("4b. Website (Amplify)", False, f"{url}: {e}")
 
 
 def run_job(session, body: dict, timeout: int):

@@ -194,3 +194,31 @@ def test_p2_memory_within_new_account_limit():
     pipe = synth(fetch="real", simulate="real")["SolarPipeline"]
     for f in pipe.find_resources("AWS::Lambda::Function").values():
         assert f["Properties"].get("MemorySize", 128) <= 3008
+
+
+def test_amplify_app_hosts_spa_and_is_allowed_by_cors(stub_templates):
+    core, api = stub_templates["SolarCore"], stub_templates["SolarApi"]
+    core.has_resource_properties("AWS::Amplify::App", {
+        "Name": "solarrooftop-web", "Platform": "WEB",
+        "CustomRules": [Match.object_like({"Target": "/index.html", "Status": "200"})],
+    })
+    core.has_resource_properties("AWS::Amplify::Branch", {"BranchName": "main", "EnableAutoBuild": False})
+    origins = api.find_resources("AWS::ApiGatewayV2::Api")
+    allow = next(iter(origins.values()))["Properties"]["CorsConfiguration"]["AllowOrigins"]
+    assert "http://localhost:5173" in allow and "http://127.0.0.1:5173" in allow
+    assert any("amplifyapp" in json.dumps(o) or "Fn::" in json.dumps(o) for o in allow if not isinstance(o, str))
+    bucket = next(iter(core.find_resources("AWS::S3::Bucket").values()))
+    bucket_origins = bucket["Properties"]["CorsConfiguration"]["CorsRules"][0]["AllowedOrigins"]
+    assert len(bucket_origins) == 3
+
+
+def test_spa_rewrite_keeps_static_files_including_mjs_workers(stub_templates):
+    import re
+    app = next(iter(stub_templates["SolarCore"].find_resources("AWS::Amplify::App").values()))
+    source = app["Properties"]["CustomRules"][0]["Source"]
+    pattern = re.compile(source[2:-2])  # Amplify's regex-rule syntax wraps the regex in </ ... />
+    for static in ("/assets/maplibre-gl-worker-VaXr2Fck.mjs", "/assets/index-G2CWcLkS.js", "/sun.svg",
+                   "/mockServiceWorker.js", "/assets/app.css", "/demo/shade.png"):
+        assert not pattern.search(static), f"{static} would be rewritten to index.html"
+    for route in ("/jobs/abc-123", "/history", "/installer", "/assess"):
+        assert pattern.search(route), f"{route} must serve index.html"

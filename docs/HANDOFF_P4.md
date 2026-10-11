@@ -87,8 +87,9 @@ Example: [`contracts/fixtures/report_C.json`](../contracts/fixtures/report_C.jso
 
 ## 5. Things P3 must do for you
 
-- **CORS:** the API and the heatmap bucket currently allow only `http://localhost:5173`. Send P3 your Amplify URL
-  (e.g. `https://main.xxxx.amplifyapp.com`) and P3 redeploys with it.
+- **Hosting:** P3 deploys the app to Amplify at https://main.da6yw5ko9zhmc.amplifyapp.com (`infra/scripts/deploy_web.py` builds `web/` and uploads it;
+  re-run after web changes). **CORS** allows `http://localhost:5173`, `http://127.0.0.1:5173` and that URL; for
+  any other origin ask P3.
 - Promote Installer test accounts (`make_installer.sh`).
 - Address autocomplete is not an API route yet; use free-text address or a map click (`{lat, lng}`).
   Geocoded addresses can land on the neighbour's roof, so let the user confirm/move the pin before submitting.

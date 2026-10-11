@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SolarRooftop AI architecture</title>
+<style>
+  html, body { margin: 0; background: #ffffff; }
+  svg { display: block; font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+  .title { font-size: 34px; font-weight: 700; fill: #1f2933; }
+  .title-light { font-weight: 400; }
+  .layer-label { font-size: 17px; font-weight: 600; fill: #3e4c59; letter-spacing: .3px; }
+  .box { fill: #ffffff; stroke: #9aa5b1; stroke-width: 1.4; }
+  .name { font-size: 18px; font-weight: 700; fill: #1f2933; }
+  .sub { font-size: 14.5px; fill: #3e4c59; }
+  .icon-text { font-size: 15px; font-weight: 700; fill: #ffffff; text-anchor: middle; }
+  .arrow { stroke: #1f2933; stroke-width: 2; fill: none; marker-end: url(#head); }
+  .arrow-dash { stroke: #52606d; stroke-width: 1.8; fill: none; stroke-dasharray: 6 5; marker-end: url(#head-grey); }
+  .lbl { font-size: 13.5px; fill: #1f2933; font-weight: 600; }
+  .lbl-bg { fill: #ffffff; opacity: .92; }
+  .foot { font-size: 14.5px; fill: #3e4c59; }
+  .foot b { font-weight: 700; }
+  .stack { font-size: 16px; fill: #3e4c59; text-anchor: middle; }
+</style>
+</head>
+<body>
+<svg width="1600" height="1000" viewBox="0 0 1600 1000" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="head" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f2933"/></marker>
+    <marker id="head-grey" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#52606d"/></marker>
+  </defs>
+
+  <text x="800" y="52" text-anchor="middle" class="title">SolarRooftop AI <tspan class="title-light">– Rooftop Solar Evaluator on AWS</tspan></text>
+
+  <!-- ===== Layer bands ===== -->
+  <rect x="40" y="82"  width="1520" height="138" rx="14" fill="#e8f2fb" stroke="#b6d3ee"/>
+  <text x="62" y="106" class="layer-label">LAYER 1 – Client</text>
+  <rect x="40" y="240" width="1520" height="138" rx="14" fill="#f1ebf8" stroke="#d3c2ea"/>
+  <text x="62" y="264" class="layer-label">LAYER 2 – API</text>
+  <rect x="40" y="398" width="1520" height="160" rx="14" fill="#fdf1e3" stroke="#f1cfa3"/>
+  <text x="62" y="422" class="layer-label">LAYER 3 – Processing pipeline</text>
+  <rect x="40" y="578" width="1520" height="226" rx="14" fill="#edf6e8" stroke="#c4e0b5"/>
+  <text x="62" y="602" class="layer-label">LAYER 4 – Storage &amp; operations</text>
+
+  <!-- ===== Layer 1 ===== -->
+  <g transform="translate(80,118)">
+    <rect class="box" width="330" height="84" rx="10"/>
+    <rect x="14" y="17" width="50" height="50" rx="9" fill="#52606d"/><text x="39" y="47" class="icon-text">USR</text>
+    <text x="78" y="36" class="name">1. Users</text>
+    <text x="78" y="60" class="sub">Homeowners &amp; solar installers</text>
+  </g>
+  <g transform="translate(560,118)">
+    <rect class="box" width="420" height="84" rx="10"/>
+    <rect x="14" y="17" width="50" height="50" rx="9" fill="#DD344C"/><text x="39" y="47" class="icon-text">AMP</text>
+    <text x="78" y="36" class="name">2. Web app</text>
+    <text x="78" y="60" class="sub">React + MapLibre on AWS Amplify Hosting</text>
+  </g>
+  <g transform="translate(1130,118)">
+    <rect class="box" width="390" height="84" rx="10"/>
+    <rect x="14" y="17" width="50" height="50" rx="9" fill="#DD344C"/><text x="39" y="47" class="icon-text">COG</text>
+    <text x="78" y="36" class="name">3. Amazon Cognito</text>
+    <text x="78" y="60" class="sub">sign-in · Homeowner / Installer groups</text>
+  </g>
+  <path class="arrow" d="M410,160 L556,160"/>
+  <path class="arrow" d="M980,160 L1126,160"/>
+  <rect class="lbl-bg" x="1020" y="138" width="62" height="18" rx="3"/><text x="1051" y="152" text-anchor="middle" class="lbl">sign in</text>
+
+  <!-- ===== Layer 2 ===== -->
+  <g transform="translate(80,276)">
+    <rect class="box" width="400" height="84" rx="10"/>
+    <rect x="14" y="17" width="50" height="50" rx="9" fill="#8C4FFF"/><text x="39" y="47" class="icon-text">API</text>
+    <text x="78" y="36" class="name">4. Amazon API Gateway</text>
+    <text x="78" y="60" class="sub">HTTP API · Cognito JWT check · throttling</text>
+  </g>
+  <g transform="translate(600,276)">
+    <rect class="box" width="400" height="84" rx="10"/>
+    <rect x="14" y="17" width="50" height="50" rx="9" fill="#ED7100"/><text x="39" y="47" class="icon-text">λ</text>
+    <text x="78" y="36" class="name">5. API Lambda + Cedar</text>
+    <text x="78" y="60" class="sub">job API · access policies · quotas</text>
+  </g>
+  <g transform="translate(1130,276)">
+    <rect class="box" width="390" height="84" rx="10"/>
+    <rect x="14" y="17" width="50" height="50" rx="9" fill="#8C4FFF"/><text x="39" y="47" class="icon-text">LOC</text>
+    <text x="78" y="36" class="name">Amazon Location Service</text>
+    <text x="78" y="60" class="sub">address → lat/lng (geocoding)</text>
+  </g>
+  <!-- web app -> API Gateway (corrected: requests enter through the gateway) -->
+  <path class="arrow" d="M770,202 L770,228 L280,228 L280,272"/>
+  <rect class="lbl-bg" x="300" y="219" width="300" height="18" rx="3"/><text x="450" y="233" text-anchor="middle" class="lbl">analyse address (POST /jobs, poll GET /jobs/{id})</text>
+  <path class="arrow" d="M480,318 L596,318"/>
+  <path class="arrow" d="M1000,318 L1126,318"/>
+  <rect class="lbl-bg" x="1032" y="296" width="66" height="18" rx="3"/><text x="1065" y="310" text-anchor="middle" class="lbl">geocode</text>
+
+  <!-- ===== Layer 3 ===== -->
+  <g transform="translate(80,436)">
+    <rect class="box" width="320" height="96" rx="10"/>
+    <rect x="14" y="23" width="50" height="50" rx="9" fill="#E7157B"/><text x="39" y="53" class="icon-text">SF</text>
+    <text x="78" y="42" class="name">AWS Step Functions</text>
+    <text x="78" y="66" class="sub">orchestration · retries · errors</text>
+  </g>
+  <g transform="translate(470,436)">
+    <rect class="box" width="320" height="96" rx="10"/>
+    <rect x="14" y="23" width="50" height="50" rx="9" fill="#ED7100"/><text x="39" y="53" class="icon-text">λ</text>
+    <text x="78" y="34" class="name">Fetch – AWS Lambda</text>
+    <text x="78" y="58" class="sub">satellite tile +</text>
+    <text x="78" y="78" class="sub">building footprints</text>
+  </g>
+  <g transform="translate(860,436)">
+    <rect class="box" width="320" height="96" rx="10"/>
+    <rect x="14" y="23" width="50" height="50" rx="9" fill="#01A88D"/><text x="39" y="53" class="icon-text">ML</text>
+    <text x="78" y="34" class="name">Roof segmentation</text>
+    <text x="78" y="58" class="sub">Amazon SageMaker AI</text>
+    <text x="78" y="78" class="sub">SegFormer-B2 · serverless</text>
+  </g>
+  <g transform="translate(1250,436)">
+    <rect class="box" width="270" height="96" rx="10"/>
+    <rect x="14" y="23" width="50" height="50" rx="9" fill="#ED7100"/><text x="39" y="53" class="icon-text">λ</text>
+    <text x="78" y="34" class="name">Solar simulation</text>
+    <text x="78" y="58" class="sub">AWS Lambda: shading,</text>
+    <text x="78" y="78" class="sub">panels, kWh, ₹ payback</text>
+  </g>
+  <!-- API Lambda -> Step Functions -->
+  <path class="arrow" d="M760,360 L760,386 L360,386 L360,432"/>
+  <rect class="lbl-bg" x="420" y="377" width="76" height="18" rx="3"/><text x="458" y="391" text-anchor="middle" class="lbl">start job</text>
+  <path class="arrow" d="M400,484 L466,484"/>
+  <path class="arrow" d="M790,484 L856,484"/>
+  <rect class="lbl-bg" x="800" y="462" width="46" height="18" rx="3"/><text x="823" y="476" text-anchor="middle" class="lbl">tile</text>
+  <path class="arrow" d="M1180,484 L1246,484"/>
+  <text x="1214" y="462" text-anchor="middle" class="lbl">roof +</text>
+  <text x="1214" y="476" text-anchor="middle" class="lbl">obstacles</text>
+
+  <!-- ===== Layer 4 ===== -->
+  <g transform="translate(80,616)">
+    <rect class="box" width="320" height="90" rx="10"/>
+    <rect x="14" y="20" width="50" height="50" rx="9" fill="#E7157B"/><text x="39" y="50" class="icon-text">CW</text>
+    <text x="78" y="36" class="name">CloudWatch + SNS</text>
+    <text x="78" y="60" class="sub">logs · failure alarm → e-mail</text>
+  </g>
+  <g transform="translate(470,616)">
+    <rect class="box" width="320" height="90" rx="10"/>
+    <rect x="14" y="20" width="50" height="50" rx="9" fill="#C925D1"/><text x="39" y="50" class="icon-text">DDB</text>
+    <text x="78" y="36" class="name">Amazon DynamoDB</text>
+    <text x="78" y="60" class="sub">job status · daily quotas</text>
+  </g>
+  <g transform="translate(860,616)">
+    <rect class="box" width="320" height="90" rx="10"/>
+    <rect x="14" y="20" width="50" height="50" rx="9" fill="#ED7100"/><text x="39" y="50" class="icon-text">ECR</text>
+    <text x="78" y="36" class="name">Amazon ECR</text>
+    <text x="78" y="60" class="sub">container images</text>
+  </g>
+  <g transform="translate(1250,616)">
+    <rect class="box" width="270" height="90" rx="10"/>
+    <rect x="14" y="20" width="50" height="50" rx="9" fill="#7AA116"/><text x="39" y="50" class="icon-text">S3</text>
+    <text x="78" y="36" class="name">Amazon S3</text>
+    <text x="78" y="60" class="sub">tiles · reports · heatmaps</text>
+  </g>
+
+  <!-- corrected: logs go to CloudWatch -->
+  <path class="arrow-dash" d="M340,532 L340,612"/>
+  <rect class="lbl-bg" x="292" y="562" width="40" height="18" rx="3"/><text x="312" y="576" text-anchor="middle" class="lbl">logs</text>
+  <!-- job status -> DynamoDB -->
+  <path class="arrow" d="M400,520 L580,612"/>
+  <rect class="lbl-bg" x="452" y="560" width="82" height="18" rx="3"/><text x="493" y="574" text-anchor="middle" class="lbl">job status</text>
+  <!-- corrected: model image comes from ECR; ECR also serves the solar Lambda images -->
+  <path class="arrow" d="M1020,616 L1020,536"/>
+  <rect class="lbl-bg" x="1028" y="567" width="96" height="18" rx="3"/><text x="1076" y="581" text-anchor="middle" class="lbl">model image</text>
+  <path class="arrow-dash" d="M900,616 L700,536"/>
+  <path class="arrow-dash" d="M1150,616 L1300,536"/>
+  <rect class="lbl-bg" x="760" y="566" width="110" height="18" rx="3"/><text x="815" y="580" text-anchor="middle" class="lbl">Lambda images</text>
+  <!-- corrected: report + heatmap go to S3 -->
+  <path class="arrow" d="M1440,532 L1440,612"/>
+  <rect class="lbl-bg" x="1340" y="562" width="94" height="18" rx="3"/><text x="1387" y="576" text-anchor="middle" class="lbl">report + map</text>
+  <!-- report back to the user through the API -->
+  <path class="arrow-dash" d="M1520,661 L1542,661 L1542,372 L980,372 L980,364"/>
+  <rect class="lbl-bg" x="1196" y="378" width="330" height="18" rx="3"/>
+  <text x="1361" y="392" text-anchor="middle" class="lbl">report + signed heatmap link back to the user</text>
+
+  <!-- ops / IaC strip inside layer 4 -->
+  <rect x="80" y="724" width="1440" height="64" rx="10" fill="#ffffff" stroke="#c4e0b5"/>
+  <text x="100" y="750" class="foot"><tspan font-weight="700">Ops &amp; IaC:</tspan> AWS CDK (Python) → AWS CloudFormation · AWS IAM least-privilege role per function · AWS Budgets alerts ($25 / $75 / $150 of $200 credit)</text>
+  <text x="100" y="774" class="foot"><tspan font-weight="700">AWS open source:</tspan> Cedar (authorization) · AWS CDK · Amplify JS libraries · AWS SDK (boto3) · Lambda Runtime Interface Emulator</text>
+
+  <text x="800" y="842" class="stack">Tech stack: PyTorch · Hugging Face Transformers · pvlib + PVGIS weather · shapely / rasterio / pyproj · React · TypeScript · MapLibre · AWS CDK</text>
+  <text x="800" y="872" class="stack" font-size="14">Data: Esri World Imagery · Overture Maps building footprints · RID roof dataset (TU Munich) · PVGIS-ERA5 (EU JRC)</text>
+  <text x="800" y="920" text-anchor="middle" font-size="13" fill="#7b8794">Serverless end to end: nothing runs (or costs) while idle · region ap-south-1 (Mumbai)</text>
+</svg>
+</body>
+</html>
