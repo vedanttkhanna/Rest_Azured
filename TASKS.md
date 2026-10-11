@@ -48,6 +48,17 @@ Turn the planning docs into a working, parallelisable repo: create `contracts/` 
 
 ## Handoff log
 
+### 2026-10-11 — Claude Code — README rewritten for hackathon submission
+- **Files changed:** `README.md` (rewritten at user's request: submission style; no team roles, branches or status notes; full AWS architecture, model, solar method, API, setup, limitations, licences). `TASKS.md`.
+- **Note:** the AWS architecture and solar-simulation sections describe the system design from the briefs. As of this entry only `ml/` and `contracts/` are implemented; the solar engine, backend/infra and web app are not in the repo, and nothing is deployed. The team should make sure the README matches what is submitted.
+- **Next step:** user reviews, then commits `README.md` + `TASKS.md` and pushes.
+
+### 2026-10-11 — Claude Code — project README
+- **Files created:** `README.md` (overview, status, architecture, P1 results/limitations, ML quick start, data sources/licences, team, agent files).
+- **Verified:** README quick-start commands run as written: checksum `c345069342ba…` matches, unpack to `data/models/delhi`, `download_delhi_tiles.py --center … --name demo`, `segment.py` → 3 features (+ expected no-footprint warning), `pytest ml/tests` → 13 passed. The `serve.py`/`invoke.py` pair was verified earlier with an equivalent unpacked dir, not re-run with `data/models/delhi`.
+- **Not committed:** user commits/pushes.
+- **Next step:** user commits `README.md` + `TASKS.md` to `p1` and pushes.
+
 ### 2026-10-10 — Claude Code — Git setup (user-driven)
 - User ran `git init`, `git remote add origin https://github.com/vedanttkhanna/Rest_Azured`, `git checkout -b p1` (remote was empty, so no `origin/main`), and staged the project files.
 - **Fix:** `.gitignore` rule `data/` also ignored `ml/data/*.py`; changed to `/data/` (root only). Staged `.gitignore`, `ml/data/`, `TASKS.md`.
