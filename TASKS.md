@@ -64,12 +64,19 @@ Implement P2 only: local solar/geospatial engine and handoff artifacts. Complete
 
 ## Handoff log
 
+### 2026-10-11 — Claude Code — pushed combined work to origin/p1
+- **Authorization:** user said "commit and push to P1".
+- **Git:** fetched origin; origin/p1 had 2 new commits (0d4e040 project README, 7f4eed3 merge, both Vedant Khanna). Committed pending P3 work (0cbbe6e), merged origin/p1 into p3 (d92d1d5; conflict only in TASKS.md handoff log, all entries kept). Checked: no `.env`, alert e-mail, `data/` or weights tracked. `git push origin p3:p1` -> fast-forward 7f4eed3..d92d1d5 (11 commits, no force). Local checkout switched to branch `p1` tracking origin/p1 (team convention); local `p3` kept.
+- **Tests before push:** `ruff check backend infra contracts` clean; `pytest backend/tests contracts/tests -q` -> 45 passed; `bash -n` on all scripts OK. Infra/CDK tests last run before this change set (34 passed); no stack code changed since.
+- **README.md (from p1):** written before P2/P3 code existed; its architecture/setup sections may need a pass to match `infra/README.md` and `docs/HANDOFF_P4.md` (not reviewed in this session).
+- **Next step:** send `docs/HANDOFF_P4.md` + VITE values to P4; P2 reviews the `solar/Dockerfile` expat line.
+
 ### 2026-10-11 — Claude Code — .env, health check, P4 hand-off note
 - **Files created:** `.env` (git-ignored: AWS_PROFILE, AWS_REGION, SOLAR_ALERT_EMAILS, SOLAR_STEP_MODES), `infra/scripts/env.sh`, `infra/scripts/dotenv.py`, `infra/scripts/check.py`, `docs/HANDOFF_P4.md`. **Changed:** `infra/scripts/deploy.sh` (loads .env, step modes from `SOLAR_STEP_MODES`, checks Docker + AWS login first), `teardown.sh` / `make_installer.sh` / `set_google_key.sh` (source env.sh), `smoke.py` / `export_env.py` (load .env), `ruff.toml`, `infra/README.md`, `AGENTS.md`, `TASKS.md`.
 - **Why:** user's terminal had no `aws` on PATH (opened before install) and the `aws login` session expired; deploys needed remembering three `-c` flags and the e-mail list. Now `deploy.sh` and `check.py` need no flags.
 - **Commands / results:** `.venv/Scripts/python.exe infra/scripts/check.py --no-open` (with AWS_PROFILE unset, i.e. loaded from .env) -> ALL GOOD: stacks complete, steps all real, endpoint InService, 1 confirmed alert e-mail, budget $0.00 spent (credits excluded), Lajpat Nagar job done in 45 s (Fetch 7.0 s, Segment 20.8 s, Simulate 11.2 s, Save 2.6 s), 27 panels / 24,167 kWh, picture saved and checked visually (purple patch in it is in the raw Esri tile). Verified for the P4 note: Cognito **ID token** accepted by the API (GET /jobs 200); CORS preflight from `http://localhost:5173` -> 204 with allow-origin + authorization header. `bash -n` on all scripts OK; `ruff check` clean. `deploy.sh` not re-run after its rewrite (no infra change needed).
-- **Not committed** (no commit authorization for this change set yet). Nothing pushed.
-- **Next step:** user authorizes commit + push (shared branch `p1`), then sends `docs/HANDOFF_P4.md` + the VITE values to P4.
+- **Committed** as 0cbbe6e (user authorized commit + push).
+- **Next step:** send `docs/HANDOFF_P4.md` + the VITE values to P4.
 
 ### 2026-10-11 — Claude Code — combine P1 + P2 + P3 and deploy all-real
 - **Git (local only, nothing pushed):** committed P3 work on `p3` (787e153); merged `origin/p1` (P1 + P2) as e76e230. Conflicts: `report_C.json` -> P2's version (P3 draft + `shade.png` removed); PROJECT_CONTEXT/TASKS -> both sides kept. Then integration commits (see `git log`).
