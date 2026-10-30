@@ -76,7 +76,7 @@ All existing feature branch histories are integrated and published on `origin/ma
 ## Handoff log
 
 ### 2026-10-30 — Claude Code (Windows 11, user Faaiz) — pulled main, bug fixes across P2/P3/P4
-- **Git:** `git fetch --all`; `git pull --ff-only origin main` fast-forwarded local `p1` 0679b08 -> b313090 (= `origin/main`). Local `p1` is now ahead of `origin/p1` (2911aaa). Nothing committed or pushed.
+- **Git:** `git fetch --all`; `git pull --ff-only origin main` fast-forwarded local `p1` 0679b08 -> b313090 (= `origin/main`). Local `p1` is now ahead of `origin/p1` (2911aaa). User then asked for a PR to `main`: branch `fix/review-2026-10-30` created from b313090, fixes committed as bf5cd44 and pushed to `origin`. `gh` is not installed on this machine, so the PR is opened from the GitHub compare page by the user.
 - **Bugs fixed (edits outside P1's area, user-requested "fix its bugs"):**
   1. P3 `backend/api/handler.py`, `geocode.py`: addresses over 200 chars (Amazon Location Geocode `QueryText` max, checked in AWS API docs) and any Location `ClientError`/throttling went unhandled -> raw API Gateway 500. Now 400 "too long to look up" / 502 "address lookup is unavailable". The optional `address` sent with lat/lng is now validated as text <= 500 chars (a non-string or huge value was stored in DynamoDB and passed into contract A).
   2. P4 `web/local/server.py`: same 200-char limit in the local geocoder; `web/src/pages/NewAssessment.tsx` validates it in address mode (the input allows 500 for the pin-mode label).
