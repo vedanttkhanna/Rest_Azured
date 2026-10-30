@@ -6,7 +6,7 @@ import yaml
 
 
 def load_config(overrides=None):
-    config = yaml.safe_load(Path(__file__).with_name("config.yaml").read_text())
+    config = yaml.safe_load(Path(__file__).with_name("config.yaml").read_text(encoding="utf-8"))
     def merge(dst, src):
         for key, value in src.items():
             if key not in dst:

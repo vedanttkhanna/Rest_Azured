@@ -17,6 +17,7 @@ from decimal import Decimal
 
 import boto3
 from boto3.dynamodb.conditions import Key
+from botocore.exceptions import BotoCoreError, ClientError
 
 import authz
 import geocode
@@ -30,6 +31,7 @@ BUCKET = os.environ.get("BUCKET", "")
 QUOTA_LIMITS = {"Homeowner": int(os.environ.get("QUOTA_HOMEOWNER", "20")),
                 "Installer": int(os.environ.get("QUOTA_INSTALLER", "100"))}
 BATCH_MAX = int(os.environ.get("BATCH_MAX", "25"))
+MAX_ADDRESS = 500  # same limit as the web form
 # Delhi/NCR demo bounding box: min_lat, min_lng, max_lat, max_lng
 BBOX = [float(x) for x in os.environ.get("BBOX", "28.4,76.8,28.9,77.4").split(",")]
 PRESIGN_SECONDS = 900
@@ -109,13 +111,21 @@ def resolve_location(item) -> dict:
         item = {"address": item}
     if not isinstance(item, dict):
         raise HttpError(400, "give {address} or {lat, lng}")
+    address = item.get("address")
+    if address is not None and (not isinstance(address, str) or len(address) > MAX_ADDRESS):
+        raise HttpError(400, f"address must be text of at most {MAX_ADDRESS} characters")
     if is_number(item.get("lat")) and is_number(item.get("lng")):
-        loc = {"lat": float(item["lat"]), "lng": float(item["lng"]), "address": item.get("address")}
-    elif isinstance(item.get("address"), str) and item["address"].strip():
+        loc = {"lat": float(item["lat"]), "lng": float(item["lng"]), "address": address}
+    elif isinstance(address, str) and address.strip():
+        if len(address.strip()) > geocode.MAX_QUERY:
+            raise HttpError(400, f"address is too long to look up (at most {geocode.MAX_QUERY} characters); "
+                                 "shorten it or use a map pin")
         try:
-            g = geocode.geocode(item["address"].strip())
+            g = geocode.geocode(address.strip())
         except geocode.GeocodeError as e:
             raise HttpError(400, str(e)) from e
+        except (ClientError, BotoCoreError) as e:
+            raise HttpError(502, "address lookup is unavailable right now; try again or use a map pin") from e
         loc = {"lat": g["lat"], "lng": g["lng"], "address": g["label"]}
     else:
         raise HttpError(400, "give {address} or {lat, lng}")

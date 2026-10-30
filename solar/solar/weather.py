@@ -37,7 +37,7 @@ def get_weather(lat, lng, config, cache, store=None):
         content = store.get_optional(key)
         if content is not None: dest.write_bytes(content)
     if dest.exists():
-        payload = json.loads(dest.read_text())
+        payload = json.loads(dest.read_text(encoding="utf-8"))
         data = pd.read_json(io.StringIO(payload["frame"]), orient="table")
         metadata = payload["metadata"]
         data.attrs["irradiance_time_offset_hours"] = metadata.get("pvgis",{}).get("inputs",{}).get("location",{}).get("irradiance_time_offset",0)

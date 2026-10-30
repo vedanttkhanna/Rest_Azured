@@ -280,7 +280,8 @@ export function MapView({
             id: "shade",
             type: "raster",
             source: "shade",
-            paint: { "raster-opacity": 0.65 },
+            layout: { visibility: shade ? "visible" : "none" },
+            paint: { "raster-opacity": 0.65, "raster-fade-duration": 0 },
           },
           "panels-fill",
         );

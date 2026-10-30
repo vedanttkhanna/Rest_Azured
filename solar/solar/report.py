@@ -22,7 +22,7 @@ if not SCHEMAS.exists(): SCHEMAS=Path(__file__).resolve().parents[2]/"contracts"
 def validate_inputs(job,segmentation,config):
     job_id(job["job_id"])
     check_location(job["lat"],job["lng"],config)
-    Draft202012Validator(json.loads((SCHEMAS/"B.schema.json").read_text())).validate(segmentation)
+    Draft202012Validator(json.loads((SCHEMAS/"B.schema.json").read_text(encoding="utf-8"))).validate(segmentation)
     if job["job_id"]!=segmentation["job_id"]: raise ValueError("A and B job IDs differ")
     roofs,obstacles=[],[]
     ids=set()
@@ -91,9 +91,13 @@ def simulate(job,segmentation,store,config,weather=None,weather_metadata=None,ne
             usable=usable_polygon(roof["polygon"],obs,grid,shade,config)
             panels,pitch=pack_panels(usable,job["lat"],job["lng"],tilt,azimuth,config,
                                     roof["properties"]["roof_type"]=="pitched",grid.convergence)
-            candidate=(panels,tilt,azimuth,poa,groups,shade,usable,pitch)
-            if best is None or len(panels)>len(best[0]): best=candidate
-        panels,tilt,azimuth,poa,groups,shade,usable,pitch=best
+            # Rank by annual plane-of-array irradiance reaching the panels, not panel count:
+            # a few extra east-facing panels can still produce less than a south-facing layout.
+            mean_shade=float(np.mean(shade[grid.mask(panels)])) if panels else 0.0
+            score=len(panels)*(poa.poa_global.sum()-mean_shade*poa.poa_direct.sum())
+            candidate=(panels,tilt,azimuth,poa,groups,shade,usable,pitch,score)
+            if best is None or score>best[-1]: best=candidate
+        panels,tilt,azimuth,poa,groups,shade,usable,pitch,_=best
         usable_area+=usable.area
         roof_mask=grid.mask([roof["polygon"]])
         heatmap[roof_mask]=shade[roof_mask]
@@ -144,6 +148,6 @@ def simulate(job,segmentation,store,config,weather=None,weather_metadata=None,ne
         "assumptions":assumptions,"data_sources":{"weather":weather_metadata["source"],"heights":height_source,
                    "imagery":job.get("imagery_source","unknown"),"footprints":"supplied_or_overture"},
         "model_version":segmentation["model_version"]}
-    Draft202012Validator(json.loads((SCHEMAS/"C.schema.json").read_text())).validate(report)
+    Draft202012Validator(json.loads((SCHEMAS/"C.schema.json").read_text(encoding="utf-8"))).validate(report)
     store.put_json(prefix+"report_C.json",report)
     return report

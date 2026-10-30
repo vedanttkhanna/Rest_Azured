@@ -75,10 +75,25 @@ def test_create_with_address_geocodes(app):
     ({}, "give {address} or {lat, lng}"),
     ({"lat": "28.6", "lng": 77.2}, "give {address} or {lat, lng}"),
     ({"lat": True, "lng": 77.2}, "give {address} or {lat, lng}"),
+    ({"address": "Sector 6, Dwarka " * 15}, "too long to look up"),
+    ({"lat": 28.6, "lng": 77.2, "address": {"x": 1}}, "address must be text"),
+    ({"lat": 28.6, "lng": 77.2, "address": "x" * 501}, "address must be text"),
 ])
 def test_create_rejects_bad_input(app, body, fragment):
     status, resp = call("POST /jobs", body=body)
     assert status == 400 and fragment in resp["error"]
+    assert executions(app["state_machine_arn"]) == []
+
+
+def test_geocoder_outage_is_502_not_a_crash(app, monkeypatch):
+    from botocore.exceptions import ClientError
+
+    def throttled(address):
+        raise ClientError({"Error": {"Code": "ThrottlingException", "Message": "slow down"}}, "Geocode")
+
+    monkeypatch.setattr(api.geocode, "geocode", throttled)
+    status, resp = call("POST /jobs", body={"address": "Mayur Vihar Phase 1"})
+    assert status == 502 and "unavailable" in resp["error"]
     assert executions(app["state_machine_arn"]) == []
 
 

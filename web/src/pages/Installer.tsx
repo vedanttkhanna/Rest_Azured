@@ -51,6 +51,8 @@ export default function Installer() {
   const submit = () => {
     setError("");
     setResult([]);
+    // A CSV parse error must not appear next to the previous attempt's API error.
+    mutation.reset();
     try {
       mutation.mutate(parseAddresses(csv));
     } catch (exception) {
@@ -59,6 +61,8 @@ export default function Installer() {
   };
   const upload = async (file?: File) => {
     if (!file) return;
+    // Clear the input so choosing the same file again still fires onChange.
+    if (fileRef.current) fileRef.current.value = "";
     if (file.size > 1_000_000) {
       setError("Use a CSV smaller than 1 MB with at most 25 rows.");
       return;
@@ -69,7 +73,6 @@ export default function Installer() {
     } catch {
       setError("Could not read that file. Paste the CSV below instead.");
     }
-    if (fileRef.current) fileRef.current.value = "";
   };
   return (
     <div className="page-enter">

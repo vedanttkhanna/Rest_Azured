@@ -158,3 +158,9 @@ def test_aws_credentials_enable_places_geocoder():
     session = SessionDouble(credentials=object())
     assert callable(make_geocoder(session))
     assert session.clients == ["geo-places"]
+
+
+def test_overlong_address_is_rejected_before_aws():
+    geocoder = make_geocoder(SessionDouble(credentials=object()))
+    with pytest.raises(ValueError, match="at most 200 characters"):
+        geocoder("Sector 6, Dwarka " * 15)

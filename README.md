@@ -185,7 +185,7 @@ Run only one mode at a time (they share port 5173). Stop any of them with **Ctrl
 
 ### 0. Prerequisites (once)
 
-- **Git** and **Node.js 22.12+** (Node 24 LTS recommended; check with `node --version`).
+- **Git** and **Node.js 22.12+** (Node 24 LTS recommended; check with `node --version`). If `npm ci` fails with "Missing: ... from lock file", your npm is too old for the lockfile: run `npx -y npm@latest ci` instead (see `web/README.md`).
 - For mode C and the tests: **Python 3.12** is installed automatically by **[uv](https://docs.astral.sh/uv/getting-started/installation/)**; install `uv` first.
 - **Windows:** run every command below in **Git Bash** (comes with Git for Windows). Python environments on Windows use
   `Scripts/python.exe`; on macOS/Linux replace it with `bin/python` in the commands below.

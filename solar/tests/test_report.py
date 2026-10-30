@@ -65,5 +65,19 @@ def test_height_defaults_and_obstacle_roof_reference(job,segmentation,config):
     assert source=="footprint_heights_with_defaults"
 
 
+def test_orientation_choice_prefers_energy_over_panel_count(tmp_path,job,segmentation,weather,config,monkeypatch):
+    import solar.report as report_module
+    real_pack=report_module.pack_panels
+    monkeypatch.setattr(report_module,"orientations",lambda *a,**k:[(25.0,180.0),(25.0,90.0)])
+
+    def pack(usable,lat,lng,tilt,azimuth,*args):
+        # The east-facing candidate gets one extra panel on the same footprint.
+        panels,pitch=real_pack(usable,lat,lng,tilt,180.0,*args)
+        return (panels+panels[:1] if azimuth==90.0 else panels),pitch
+    monkeypatch.setattr(report_module,"pack_panels",pack)
+    report=simulate(job,segmentation,Store(tmp_path),config,weather,{"source":"synthetic_test_weather"})
+    assert report["system"]["azimuth_deg"]==180.0
+
+
 def test_store_rejects_path_traversal(tmp_path):
     with pytest.raises(ValueError): Store(tmp_path).path("../../secret")
