@@ -29,8 +29,8 @@ def simulate_handler(event,context=None):
     def work(store,config):
         a=event["A"]
         b=event["B"]
-        if isinstance(a,str): a=json.loads(store.materialize(a).read_text())
-        if isinstance(b,str): b=json.loads(store.materialize(b).read_text())
+        if isinstance(a,str): a=json.loads(store.materialize(a).read_text(encoding="utf-8"))
+        if isinstance(b,str): b=json.loads(store.materialize(b).read_text(encoding="utf-8"))
         weather=read_weather(store.materialize(event["weather_uri"])) if event.get("weather_uri") else None
         return simulate(a,b,store,config,weather=weather,
                         weather_metadata=event.get("weather_metadata"),neighbors=event.get("neighbors"))

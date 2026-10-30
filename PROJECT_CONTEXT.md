@@ -45,7 +45,7 @@ The data contracts (A RoofJob, B Segmentation GeoJSON, C Report) and HTTP routes
 | Budget with `IncludeCredit: false`, alerts $25/$75/$150 actual + $150 forecast | With credits included, spend nets to $0 and alerts never fire. |
 | Lambda zips built at synth time with `uv pip install --python-platform x86_64-manylinux2014` (no Docker) | P3 machine is Windows; cedarpy/jsonschema need Linux wheels; keeps `cdk synth` and CI Docker-free. |
 | Daily quota table (Homeowner 20, Installer 100 jobs/IST day), Delhi/NCR bbox 28.4–28.9 N, 76.8–77.4 E, batch ≤ 25 | Protects Google API + SageMaker spend; demo scope is Delhi. |
-| API reports jobs still running after 7 min as `failed` | Step Functions' overall timeout skips Catch, which would leave the job stuck. |
+| API reports jobs still running 12 min after their last status update as `failed` (state machine timeout is 10 min) | Step Functions' overall timeout skips Catch, which would leave the job stuck. |
 | No separate SAM `template.yaml`; `sam local invoke -t infra/cdk.out/<Stack>.template.json` | One source of truth (CDK). |
 
 ## Verified external facts

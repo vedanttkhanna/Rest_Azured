@@ -4,7 +4,7 @@ P4’s React workspace for the existing Delhi rooftop pipeline. Warm ivory, deep
 
 ## Run locally
 
-Use Node 22.12+ (or Node 24/26) and npm. From the repository root:
+Use Node 22.12+ (or Node 24/26) and npm. The lockfile needs a recent npm: npm 11.6.2 (bundled with Node 24.13) rejects it in `npm ci` because `vitest`'s optional `msw@^2` peer conflicts with our `msw@3`; npm 12.2.1 installs it cleanly (run `npx -y npm@latest ci` if your npm is older). From the repository root:
 
 ```bash
 cd web

@@ -6,6 +6,7 @@ import os
 import boto3
 
 DELHI = [77.2090, 28.6139]  # [lng, lat] bias point
+MAX_QUERY = 200  # Geocode QueryText limit; longer text is a ValidationException
 
 _client = None
 

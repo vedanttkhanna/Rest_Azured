@@ -274,6 +274,8 @@ def make_geocoder(session):
     geocode._client = session.client("geo-places")
 
     def geocoder(address):
+        if len(address) > geocode.MAX_QUERY:
+            raise ValueError(f"Address lookup accepts at most {geocode.MAX_QUERY} characters. Shorten it or use a map pin.")
         try:
             return geocode.geocode(address)
         except Exception:

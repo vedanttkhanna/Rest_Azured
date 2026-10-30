@@ -88,6 +88,13 @@ export default function NewAssessment() {
         setValidation("Enter a Delhi/NCR address.");
         return;
       }
+      // Amazon Location rejects longer geocoding queries.
+      if (address.trim().length > 200) {
+        setValidation(
+          "Address lookup accepts up to 200 characters. Shorten the address or use the map pin.",
+        );
+        return;
+      }
       input = { address: address.trim() };
     }
     mutation.mutate(input);
